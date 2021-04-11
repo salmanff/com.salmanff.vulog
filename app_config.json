@@ -1,0 +1,148 @@
+{
+	"meta": {
+		"app_name":"com.salmanff.vulog",
+		"app_display_name":"Vulog - bookmarker, highlighter and web history logger",
+		"app_version": "0.0.300"
+	},
+
+	"files": {
+	},
+
+	"pages": {
+		"index": {
+			"page_title":"vulog marks",
+			"html_file":"marks.html",
+			"css_files": ["static/index.css","public/static/font-awesome.min.css"],
+			"script_files": ["dgelements.js","markerclass.js","marks.js"]
+		},
+		"marks": {
+			"page_title":"vulog marks",
+			"html_file":"marks.html",
+      "css_files": ["static/index.css","public/static/font-awesome.min.css"],
+			"script_files": ["dgelements.js","markerclass.js","marks.js"]
+		},
+		"history": {
+			"page_title":"Vulog history",
+			"html_file":"history.html",
+      "css_files": ["static/index.css","public/static/font-awesome.min.css"],
+			"script_files": ["dgelements.js","historyclass.js","history.js"]
+		}
+	},
+
+	"public_pages": {
+		"index": {
+			"page_title":"Vulog public history",
+			"html_file":"vulogmustache.html",
+			"css_files": ["vulogmustache.css"],
+			"initial_data": {"url": "/v1/pdbq/com.salmanff.vulog"}
+		},
+
+		"publicmark": {
+			"page_title":"vulog - shared page",
+			"html_file":"vulog_ppage.html",
+			"css_files": ["vulog_ppage.css"],
+			"script_files": [],
+			"header_map": {
+				"author":{"field_name":"_owner","text":"User:"},
+				"published":{"field_name":"__date_published"},
+				"title":{"field_name":"title"},
+				"image":{"field_name":"image"},
+				"description":{"field_name":"description"},
+				"twitter:card":{"field_name":"purl"},
+				"twitter:title":{"field_name":"title"},
+				"twitter:image":{"field_name":"image"},
+				"twitter:description":{"field_name":"description"},
+				"application-description":{"text":"Vulog is a browser extention for logging viewing history and managing bookmarks"}
+			}
+		}
+	},
+
+	"collections": {
+		"logs": {
+			"field_names":{
+				// vulog defined main fields
+				"url": {"type":"string", "description":"Full url fo the site"},
+				"purl": {"type":"string", "description":"the url without the query component"},
+				"domain_app": {"type":"string", "description":"App name if page meta data defines it, and if not the main domain"},
+
+				// scraped fields
+				"author": {"type":"string", "description":"Article author if available"},
+				"description": {"type":"string", "description":" "},
+				"image": {"type":"string", "description":" "},
+				"keywords": {"type":"string", "description":" "},
+				"modified": {"type":"string", "description":" "},
+				"other": {"type":"string", "description":" "},
+				"published": {"type":"string", "description":" "},
+				"title": {"type":"string", "description":" "},
+				"type": {"type":"string", "description":" "},
+
+				// frozen jlos fields
+				"fj_deleted": {"type":"string", "description":" "},
+				"fj_local_temp_unique_id": {"type":"string", "description":" "},
+				"fj_modified_locally": {"type":"string", "description":" "},
+
+				// vulog misc fields
+				"parser_err": {"type":"string", "description":" "},
+				"temp_unknown_tags": {"type":"string", "description":" "},
+				"vuLog_height": {"type":"string", "description":" "},
+				"vulog_kword2": {"type":"string", "description":" "},
+				"vulog_mark_notes": {"type":"string", "description":" "},
+				"vulog_mark_notesTags": {"type":"string", "description":" "},
+				"vulog_mark_stars": {"type":"string", "description":" "},
+				"vulog_mark_tags": {"type":"string", "description":" "},
+				"vulog_max_scroll": {"type":"string", "description":" "},
+				"vulog_msg_type": {"type":"string", "description":" "},
+				"vulog_time_incr": {"type":"string", "description":" "},
+				"vulog_timestamp": {"type":"string", "description":" "},
+				"vulog_ttl_time": {"type":"string", "description":" "},
+				"vulog_visit_details": {"type":"string", "description":" "},
+				"vulog_visits": {"type":"string", "description":" "}
+			}
+		},
+		"marks": {
+			"field_names": {
+				"fj_modified_locally": {"type":"date"},
+				"url": {"type":"string", "description":" "},
+				"domain_app": {"type":"string", "description":" "},
+				"type": {"type":"string", "description":" "},
+				"author": {"type":"string", "description":" "},
+				"description": {"type":"string", "description":" "},
+				"keywords": {"type":"string", "description":" "},
+				"other": {"type":"string", "description":" "},
+				"vulog_kword2": {"type":"string", "description":" "},
+				"vulog_msg_type": {"type":"string", "description":" "},
+				"vulog_timestamp": {"type":"string", "description":" "},
+				"vulog_ttl_time": {"type":"string", "description":" "},
+				"vulog_max_scroll": {"type":"string", "description":" "},
+				"vuLog_height": {"type":"string", "description":" "},
+				"temp_unknown_tags": {"type":"string", "description":" "},
+				"fj_modified_locally": {"type":"string", "description":" "},
+				"tabid": {"type":"string", "description":" "},
+				"fj_deleted": {"type":"string", "description":" "},
+				"purl": {"type":"string", "description":" "},
+				"title": {"type":"string", "description":" "}
+			},
+
+			"rss_map": {
+				"title": "title",
+				"description":"description",
+				"pubDate":"__date_Published",
+				"imgurl":"image",
+				"imgtitle":null
+			}
+		}
+	},
+
+	"permissions": {
+		"publish_favorites" : {
+			"type":"object_delegate",
+			"collection_name": "marks",
+			"description": "Publish favorite links",
+			"sharable_group":"public",
+			"return_fields": ["author","_owner","description","domain_app","image","keywords","path","purl","title","type","url","vulog_kword2","date","vulog_mark_notes","vulog_mark_tags","vulog_favIconUrl"],
+			"search_fields": ["vulog_kword2"],
+			"pcard":"vulogcard.html",
+			"ppage":"publicmark"
+		}
+	}
+}

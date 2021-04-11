@@ -1,0 +1,26 @@
+
+html {
+  height:100%
+}
+body {
+  height:100%
+}
+.writing_outer {
+    background-color: yellowgreen ;
+    text-align:center;
+    border-bottom: 1px solid yellowgreen;
+    border-top: 1px solid yellowgreen;
+    margin:0;
+}
+.writingDiv{
+  font-family: "Lucida Sans Unicode", "Helvetica Neue", "Arial", sans-serif;
+  border-radius:5px;
+  padding:20px;
+  text-align:left;
+  max-width:600px;
+  margin:0 auto;
+  margin-top: 50px;
+  margin-bottom: 50px;
+  background-color:white;
+
+}

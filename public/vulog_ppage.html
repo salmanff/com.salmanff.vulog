@@ -1,0 +1,92 @@
+
+<div class="writing_outer">
+	<div class="writingDiv">
+
+		<a href="/papp/com.salmanff.vulog" style="position: relative; float: right; width: 40px;">
+			<img src="/apps/com.salmanff.vulog/public/static/logo.png" style="width: 40px;"/>
+		</a>
+
+		<div style="">
+			Shared link from <span style="font-weight:bold; color:yellowgreen;">vulog</span> .
+		</div>
+
+		<div style="font-style: italic; color:#3f51b5; margin-top:3px;">
+			Posted by {{_data_owner}}
+			<span {{^__date_published}}style="display:none"{{/__date_published}}>
+					on {{__date_published}}
+			</span>
+		</div>
+
+		<div id="vulog_show_if_extension_is_installed" style="display:none">
+			<a href="?vulogredirect=true">Go to site and see highlights</a>
+		</div>
+		<div id="vulog_show_if_NOT_installed" style="display:none">
+			Get the vulog extension to <br>
+			see the highlights shares with you
+		</div>
+
+
+		<br/>
+		<br/>
+
+		<div id="{{_id}}" style='font-family: "Lucida Sans Unicode", "Helvetica Neue", "Arial", sans-serif; font-size: 14px; padding:5px;'>
+
+				<div style="font-size:12px; font-style: italic; color:#3f51b5; float:right; margin-right:20px; display:none;">
+		      <span {{^__date_published}}style="display:none"{{/__date_published}}>
+		          Posted on {{__date_published}}
+		      </span>
+		    </div>
+
+				<div>
+					<img width="20px" {{^vulog_favIconUrl}}style="display:none"{{/vulog_favIconUrl}} src="{{vulog_favIconUrl}}"/>
+					<span style="font-weight:bold">{{domain_app}}</span>
+					  <span style="font-style: italic; {{^author}}display:none{{/author}}"> &nbsp; By {{author}}</span>
+						<span style="font-style: italic; {{^published}}display:none{{/published}}">({{published}})</span>
+				</div>
+
+				<a {{^title}} style="" {{/title}}
+		        {{#title}}style="font-weight: bold;"{{title}} {{/title}}
+		        href={{url}} target="_blank">
+				      {{#title}}{{title}}{{/title}} {{^title}} {{url}} {{/title}}
+				</a>
+
+			<div style="color:grey; min-width:100px">
+					{{#date}} date: {{date}} {{/date}}
+					{{description}}
+			</div>
+
+			<div style="align-items: center; justify-content: center;max-height:200px; margin-top:5px; margin-bottom:5px; border-radius:5px; overflow: hidden;display:{{^image}}none; {{/image}}{{#image}}flex;{{/image}}">
+				<img src="{{image}}" width="100%" ></div>
+
+			<div style="{{^vulog_highlights}} display:none; {{/vulog_highlights}} margin-bottom:20px; text-align:center;">
+						{{#vulog_highlights}}
+							<div style="margin-top: 10px; padding-left: 10px; padding-right: 10px;">
+								<div style="text-align:left; border-radius: 3px;display: inline-block;padding: 5px;color: white;font-weight: bold;background-color: yellowgreen;">
+									{{string}}
+								</div>
+							</div>
+						{{/vulog_highlights}}
+			</div>
+
+			<div style="color:#3f51b5; font-weight:bold; {{^vulog_mark_notes}}display:none{{/vulog_mark_notes}}">
+					{{vulog_mark_notes}}
+			</div>
+
+			<div style="font-style: italic; color:#3f51b5; {{^vulog_mark_tags}} display:none {{/vulog_mark_tags}}">
+						Tags: {{#vulog_mark_tags}} {{.}}{{/vulog_mark_tags}}
+			</div>
+
+			<div style="display:none">
+					<div style="font-size:12px; font-style: italic; color:#3f51b5;">
+						Posted by {{_data_owner}}
+						<span {{^_date_modified}}style="display:none"{{/_date_modified}}>
+								on {{__date_modified}}
+						</span>
+					</div>
+					<div style="color:grey;{{^keywords}}display:none{{/keywords}}">
+						Key words: {{#keywords}} {{.}}{{/keywords}}
+					</div>
+			</div>
+		</div>
+	</div>
+</div>
