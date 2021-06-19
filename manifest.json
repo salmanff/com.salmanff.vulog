@@ -1,9 +1,10 @@
 {
-	"meta": {
-		"app_name":"com.salmanff.vulog",
-		"app_display_name":"Vulog - bookmarker, highlighter and web history logger",
-		"app_version": "0.0.300"
-	},
+  "identifier": "com.salmanff.vulog",
+  "display_name":"Vulog",
+  "version": "0.0.300",
+  "description": "A bookmarker, highlighter and web history logger",
+  "app_url": "https://github.com/salmanff/com.salmanff.vulog",
+  "manifest_url": "https://github.com/salmanff/com.salmanff.vulog/blob/main/manifest.json",
 
 	"files": {
 	},
@@ -57,7 +58,7 @@
 		}
 	},
 
-	"collections": {
+	"app_tables": {
 		"logs": {
 			"field_names":{
 				// vulog defined main fields
@@ -133,16 +134,26 @@
 		}
 	},
 
-	"permissions": {
-		"publish_favorites" : {
-			"type":"object_delegate",
-			"collection_name": "marks",
-			"description": "Publish favorite links",
-			"sharable_group":"public",
-			"return_fields": ["author","_owner","description","domain_app","image","keywords","path","purl","title","type","url","vulog_kword2","date","vulog_mark_notes","vulog_mark_tags","vulog_favIconUrl"],
-			"search_fields": ["vulog_kword2"],
-			"pcard":"vulogcard.html",
-			"ppage":"publicmark"
-		}
-	}
+	"permissions":
+    [{
+      "name": "link_share",
+      "type": "share_records",
+     	"description": "Share bookmarks with your friends",
+     	"table_id": "com.salmanff.vulog.marks",
+      "return_fields": ["author","_owner","description","domain_app","image","keywords","path","purl","title","type","url","vulog_kword2","date","vulog_mark_notes","vulog_mark_tags","vulog_favIconUrl", "vulog_highlights"],
+      "search_fields": ["vulog_kword2"],
+      "pcard":"vulogcard.html",
+      "ppage":"publicmark"
+     },
+     {
+       "name": "friends",
+       "table_id": "dev.ceps.contacts",
+    	 "type": "read_all",
+     	 "description": "Reading contacts to share with"
+      }
+    ]
+
+
+
+
 }
