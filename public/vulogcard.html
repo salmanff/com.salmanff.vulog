@@ -1,9 +1,8 @@
 
 <div id="{{_id}}" style='font-family: "Lucida Sans Unicode", "Helvetica Neue", "Arial", sans-serif; font-size: 14px; padding:5px;'>
-
 		<div style="font-size:12px; font-style: italic; color:#3f51b5; float:right; margin-right:20px;">
-			<span {{^__date_published}}style="display:none"{{/__date_published}}>
-					Posted on {{__date_published}} via <a href="/papp/com.salmanff.vulog">vulog</a>
+			<span {{^_date_published}}style="display:none"{{/_date_published}}>
+					Posted by {{_data_owner}} on {{__date_published}} via <a href="/papp/{{_data_owner}}/com.salmanff.vulog">vulog</a>
 			</span>
 		</div>
 
@@ -14,35 +13,36 @@
 				<span style="font-style: italic; {{^published}}display:none{{/published}}">({{published}})</span>
 		</div>
 
+    <div style="color:#3f51b5; font-weight:bold; padding-top:10px; padding-bottom: 10px; {{^vulog_mark_notes}}display:none{{/vulog_mark_notes}}">
+        {{vulog_mark_notes}}
+    </div>
+
+
 		<a {{^title}} style="" {{/title}}
 				{{#title}}style="font-weight: bold;"{{title}} {{/title}}
 				href={{url}} target="_blank">
 					{{#title}}{{title}}{{/title}} {{^title}} {{url}} {{/title}}
 		</a>
 
-	<div style="color:grey;">
-			{{#date}} date: {{date}} {{/date}}
-			{{description}}
-	</div>
-
 		<div style="align-items: center; justify-content: center;text-align: center; margin-left:10%; margin-right:10%;  max-height:200px; margin-top:5px; margin-bottom:5px; border-radius:5px; overflow: hidden;display:{{^image}}none; {{/image}}{{#image}}flex;{{/image}}">
 			<img src="{{image}}" width="100%" >
 		</div>
 
+    <div style="color:grey;">
+  			{{#date}} date: {{date}} {{/date}}
+  			{{description}}
+  	</div>
+
 	<div style="{{^vulog_highlights}} display:none; {{/vulog_highlights}} margin-bottom:20px; text-align:center;">
 				{{#vulog_highlights}}
 					<div style="margin-top: 10px; padding-left: 10px; padding-right: 10px;">
-						<span style="vertical-align:top"><img src="/apps/com.salmanff.vulog/public/static/left-quote.png" width="20px"></span>
+						<span style="vertical-align:top"><img src="/app_files/{{_data_owner}}/com.salmanff.vulog/public/static/left-quote.png" width="20px"></span>
 						<span style="width:80%; text-align:left; border-radius: 3px;display: inline-block;padding: 5px;color: white;font-weight: bold;background-color: yellowgreen;">
 							{{string}}
 						</span>
-						<span style="vertical-align:bottom"><img src="/apps/com.salmanff.vulog/public/static/right-quote.png" width="20px"></span>
+						<span style="vertical-align:bottom"><img src="/app_files/{{_data_owner}}/com.salmanff.vulog/public/static/right-quote.png" width="20px"></span>
 					</div>
 				{{/vulog_highlights}}
-	</div>
-
-	<div style="color:#3f51b5; font-weight:bold; {{^vulog_mark_notes}}display:none{{/vulog_mark_notes}}">
-			{{vulog_mark_notes}}
 	</div>
 
 	<div style="font-style: italic; color:#3f51b5; {{^vulog_mark_tags}} display:none {{/vulog_mark_tags}}">
