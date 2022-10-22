@@ -39,7 +39,7 @@
 
 				<div>
 					<img width="20px" {{^vulog_favIconUrl}}style="display:none"{{/vulog_favIconUrl}} src="{{vulog_favIconUrl}}"/>
-					<span style="font-weight:bold">{{domain_app}}</span>
+					<span style="font-weight:bold">{{domain_app}}</span><span style="font-weight:bold">{{domainApp}}</span>
 					  <span style="font-style: italic; {{^author}}display:none{{/author}}"> &nbsp; By {{author}}</span>
 						<span style="font-style: italic; {{^published}}display:none{{/published}}">({{published}})</span>
 				</div>
@@ -67,13 +67,21 @@
 							</div>
 						{{/vulog_highlights}}
 			</div>
-
-			<div style="color:#3f51b5; font-weight:bold; {{^vulog_mark_notes}}display:none{{/vulog_mark_notes}}">
-					{{vulog_mark_notes}}
+			<div style="{{^vHighlights}} display:none; {{/vHighlights}} margin-bottom:20px; text-align:center;">
+						{{#vHighlights}}
+							<div style="margin-top: 10px; padding-left: 10px; padding-right: 10px;">
+								<div style="text-align:left; border-radius: 3px;display: inline-block;padding: 5px;color: white;font-weight: bold;background-color: yellowgreen;">
+									{{string}}
+								</div>
+							</div>
+						{{/vHighlights}}
 			</div>
 
-			<div style="font-style: italic; color:#3f51b5; {{^vulog_mark_tags}} display:none {{/vulog_mark_tags}}">
-						Tags: {{#vulog_mark_tags}} {{.}}{{/vulog_mark_tags}}
+			<div style="color:#3f51b5; font-weight:bold; {{^vNote}}display:none{{/vNote}}">
+					{{vNote}}
+			</div>
+			<div style="color:#3f51b5; font-weight:bold; {{^vulog_mark_notes}}display:none{{/vulog_mark_notes}}">
+					{{vulog_mark_notes}}
 			</div>
 
 			<div style="display:none">

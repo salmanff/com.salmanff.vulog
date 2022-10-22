@@ -171,7 +171,7 @@ History_class.prototype.drawItem = function (alog) {
         href:alog.url,
         target:'_blank'
       },
-      (alog.title? (alog.domain_app+" - "+alog.title): alog.url)
+      (alog.title? (alog.domainApp+" - "+alog.title): alog.url)
     )
   ))
 

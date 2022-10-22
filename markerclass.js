@@ -184,7 +184,7 @@ Marker_class.prototype.drawItem = function (alog) {
           that.urlwin = window.open(alog.url,"window","width=800, height="+height+",  left ="+(left+500)+", top="+top)//toolbar=0, menubar=0,
         }
       },
-      (alog.title? (alog.domain_app+" - "+alog.title): alog.url)
+      (alog.title? (alog.domainApp+" - "+alog.title): alog.url)
     )
   ))
 
@@ -202,10 +202,9 @@ Marker_class.prototype.drawItem = function (alog) {
     })
   )
   let topstars = [...this.XTRA_STARS, ...this.MAIN_STARS]
-  let chosenstars = (alog.vulog_highlights && alog.vulog_highlights.length>0)? ["quote-left","quote-right"]:[]
-  chosenstars = alog.vulog_mark_stars?[...chosenstars , ...alog.vulog_mark_stars]:chosenstars;
-  if (alog.vulog_mark_tags && alog.vulog_mark_tags.length>0) chosenstars.push("tags")
-  if (alog.vulog_mark_notes && alog.vulog_mark_notes.length>0) chosenstars.push("sticky-note")
+  let chosenstars = (alog.vHighlights && alog.vHighlights.length>0)? ["quote-left","quote-right"]:[]
+  chosenstars = alog.vStars?[...chosenstars , ...alog.vStars]:chosenstars;
+  if (alog.vNote && alog.vNote.length>0) chosenstars.push("sticky-note")
   topstars.forEach(aStar => {
     let chosen = (chosenstars.includes(aStar))? "chosen":"unchosen";
     let changable = this.MAIN_STARS.includes(aStar)
@@ -261,25 +260,17 @@ Marker_class.prototype.drawItem = function (alog) {
       alog.description
     ))
   }
-  if (alog.vulog_mark_tags && alog.vulog_mark_tags.length>0) {
-    detailsdiv.appendChild(dg.div(
-      {style:{'color':'darkgrey'}},
-      "Tags: ",
-      dg.span({style:{'color':'indianred','font-weight':'bold'}},(alog.vulog_mark_tags.join(", "))),
-      "."
-    ))
-  }
-  if (alog.vulog_mark_notes) {
+  if (alog.vNote) {
     detailsdiv.appendChild(dg.div(
       {style:{'color':'darkgrey','margin-bottom':'3px'}},
       "Notes: ",
       dg.span(
       {style:{'color':'indianred','font-weight':'bold'}},
-      alog.vulog_mark_notes)
+      alog.vNote)
     ))
   }
-  if (alog.vulog_highlights && alog.vulog_highlights.length>0) {
-    alog.vulog_highlights.forEach((item, i) => detailsdiv.appendChild(marks.drawHighlight(item, {include_delete:false, show_display_errs:false})));
+  if (alog.vHighlights && alog.vHighlights.length>0) {
+    alog.vHighlights.forEach((item, i) => detailsdiv.appendChild(marks.drawHighlight(item, {include_delete:false, show_display_errs:false})));
   }
 
   itemdiv.appendChild(detailsdiv)

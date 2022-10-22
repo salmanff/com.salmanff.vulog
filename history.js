@@ -44,10 +44,10 @@ const historyfuncs = {
     var q =  {'$or':[{'fj_deleted':{$exists:false}},{'fj_deleted':false}]};
     if (params.words && params.words.length>0)  {
         if (params.words.length==1) {
-            q.vulog_kword2 = params.words[0];
+            q.vSearchWords = params.words[0];
         } else {
             var searchArray=[];
-            params.words.forEach(function(anItem) {if (anItem && anItem!=" ") searchArray.push({vulog_kword2:anItem}) });
+            params.words.forEach(function(anItem) {if (anItem && anItem!=" ") searchArray.push({vSearchWords:anItem}) });
             q.$and = searchArray;
         }
     }
