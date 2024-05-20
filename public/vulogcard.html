@@ -1,53 +1,62 @@
 
 <div id="{{_id}}" style='font-family: "Lucida Sans Unicode", "Helvetica Neue", "Arial", sans-serif; font-size: 14px; padding:5px;'>
-		<div style="font-size:12px; font-style: italic; color:#3f51b5; float:right; margin-right:20px;">
-			<span {{^_date_published}}style="display:none"{{/_date_published}}>
-					Posted by {{_data_owner}} on {{__date_published}} via <a href="/papp/{{_data_owner}}/com.salmanff.vulog">vulog</a>
-			</span>
-		</div>
 
-		<div>
-			<img width="20px" {{^vulog_favIconUrl}}style="display:none"{{/vulog_favIconUrl}} src="{{vulog_favIconUrl}}"/>
-			<span style="font-weight:bold">{{domain_app}}</span>
+		{{#vComments}}
+		<div style="margin-top: 5px">
+			<div style="text-align: left; color: rgb(104, 3, 104); background-color: lightgray; border: 1px solid grey; padding: 3px; border-radius: 3px; margin-bottom: 5px;">
+				{{text}}
+			</div>
+		</div>
+		{{/vComments}}
+
+		<div style="padding: 10px 20px">
+			<div>
+				<img width="20px" imgerror="hide"  {{^vulog_favIconUrl}}style="display:none"{{/vulog_favIconUrl}} src="{{vulog_favIconUrl}}"/>
+				<a style="font-weight: bold;" href={{url}} target="_blank">
+					{{#title}}{{title}}{{/title}} {{^title}} {{domain_app}} {{/title}}
+				</a>
 				<span style="font-style: italic; {{^author}}display:none{{/author}}"> &nbsp; By {{author}}</span>
 				<span style="font-style: italic; {{^published}}display:none{{/published}}">({{published}})</span>
+			</div>
+
+
+			<div style="display: grid; grid-template-columns: {{#description}}1fr{{/description}} {{#image}}1fr{{/image}}; padding: 2px;">
+				{{#description}}<div style="max-height: 100px; overflow: hidden; text-overflow: ellipsis; color: darkgrey;">
+					{{description}}
+				</div>{{/description}}
+
+				{{#image}}
+				<div style="max-height: 100px; overflow: hidden; display: flex; align-items: center; border-radius: 20px;">
+					<img src="{{image}}" style="max-width: 100%;">
+				</div>
+				{{/image}}
+			</div>
 		</div>
 
-    <div style="color:#3f51b5; font-weight:bold; padding-top:10px; padding-bottom: 10px; {{^vulog_mark_notes}}display:none{{/vulog_mark_notes}}">
-        {{vulog_mark_notes}}
-    </div>
-
-
-		<a {{^title}} style="" {{/title}}
-				{{#title}}style="font-weight: bold;"{{title}} {{/title}}
-				href={{url}} target="_blank">
-					{{#title}}{{title}}{{/title}} {{^title}} {{url}} {{/title}}
-		</a>
-
-		<div style="align-items: center; justify-content: center;text-align: center; margin-left:10%; margin-right:10%;  max-height:200px; margin-top:5px; margin-bottom:5px; border-radius:5px; overflow: hidden;display:{{^image}}none; {{/image}}{{#image}}flex;{{/image}}">
-			<img src="{{image}}" width="100%" >
-		</div>
-
-    <div style="color:grey;">
-  			{{#date}} date: {{date}} {{/date}}
-  			{{description}}
-  	</div>
-
-	<div style="{{^vulog_highlights}} display:none; {{/vulog_highlights}} margin-bottom:20px; text-align:center;">
-				{{#vulog_highlights}}
-					<div style="margin-top: 10px; padding-left: 10px; padding-right: 10px;">
-						<span style="vertical-align:top"><img src="/app_files/{{_data_owner}}/com.salmanff.vulog/public/static/left-quote.png" width="20px"></span>
-						<span style="width:80%; text-align:left; border-radius: 3px;display: inline-block;padding: 5px;color: white;font-weight: bold;background-color: yellowgreen;">
-							{{string}}
-						</span>
-						<span style="vertical-align:bottom"><img src="/app_files/{{_data_owner}}/com.salmanff.vulog/public/static/right-quote.png" width="20px"></span>
+		<div style="{{^vHighlights}} display:none; {{/vHighlights}} margin-bottom: 20px; text-align:center;">
+			<div style="font-size: medium; font-weight: bold; color: yellowgreen; text-align: left; margin-top: 10px;">Highlights</div>
+			{{#vHighlights}}
+				<div class="highlightOuter">
+					<div class="quote_outer" style="border-color: yellowgreen;">
+						<div style="display: grid; color: yellowgreen; grid-template-columns: 5px 1fr 5px; margin: 10px;">
+							<div class="quote_left"></div>
+							<div class="quote_inner" style="text-align: left">{{string}}</div>
+							<div class="quote_right"></div>
+						</div>
+						{{#vComments}}
+						<div style="margin-left: 20px; margin-top: 5px">
+							<div style="text-align: left; color: rgb(104, 3, 104); background-color: lightgrey; border: 1px solid grey; padding: 3px; border-radius: 3px; margin-right: 5px;">
+								{{text}}
+							</div>
+							<div style="padding-right: 5px; margin-bottom: 10px; margin-right: 0px; font-size: smaller; color: darkgray;">
+								<div style="float: right;">{{dateText}}</div>
+							</div>
+						</div>
+					{{/vComments}}
 					</div>
-				{{/vulog_highlights}}
-	</div>
-
-	<div style="font-style: italic; color:#3f51b5; {{^vulog_mark_tags}} display:none {{/vulog_mark_tags}}">
-				Tags: {{#vulog_mark_tags}} {{.}}{{/vulog_mark_tags}}
-	</div>
+				</div>
+			{{/vHighlights}}
+		</div>
 
 	<div style="display:none">
 			<div style="font-size:12px; font-style: italic; color:#3f51b5;">
