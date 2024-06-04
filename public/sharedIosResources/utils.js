@@ -70,12 +70,24 @@ const convertListerParamsToDbQuery = function (queryParams, q) {
   return q
 }
 
+const assignSenderIdAndHostFromFreezrMeta = (item) => {
+  if (!item.sender_id) {
+    item.sender_id = freezrMeta?.userId
+    item.sender_host = freezrMeta?.serverAddress
+  }
+  return item
+}
+const assignDateTextFromCreatedDate = (item) => {
+  item.dateText = overlayUtils.dateOrTime(item.vCreated)
+  return item
+}
+
+const LOG_FIELDS_USED_IN_MARKS = ['url', 'purl', 'description', 'domainApp', 'title', 'author', 'image', 'keywords', 'type', 'vulog_favIconUrl', 'vulog_max_scroll', 'vSearchString', 'vCreated', 'referrer']
 const convertLogToMark = function (logtomark, options) {
   if (!logtomark) return null
   const newmark = { vulog_mark_tags: [], vHighlights: [], vNote: '', vStars: [] }
-  const ToTransfer = ['url', 'purl', 'description', 'domainApp', 'title', 'author', 'image', 'keywords', 'type', 'vulog_favIconUrl', 'vulog_max_scroll', 'vSearchString', 'vCreated']
   // todo vulog_max_scroll to be replaced by last scroll etc
-  ToTransfer.forEach((item) => {
+  LOG_FIELDS_USED_IN_MARKS.forEach((item) => {
     if (logtomark[item]) {
       newmark[item] = JSON.parse(JSON.stringify(logtomark[item]))
     }
@@ -91,12 +103,16 @@ const convertLogToMark = function (logtomark, options) {
   newmark.vHighlights = []
   newmark.vComments = []
 
+  newmark.vCreated = new Date().getTime()
+
   if (!newmark.url) newmark.url = newmark.purl
 
   if (!newmark.url) throw Error('trying to convert log to mark with nopurl ', logtomark)
   return newmark
 }
+
 const convertMarkToSharable = function (mark, options) {
+  // options: excludeHlights, excludeHlightComments
   if (!mark) return null
   const newmark = { vHighlights: [], vNote: '', vStars: [] }
   const ToTransfer = ['url', 'purl', 'description', 'domainApp', 'title', 'author', 'image', 'keywords', 'vulog_favIconUrl']
@@ -108,15 +124,26 @@ const convertMarkToSharable = function (mark, options) {
 
   if (!options?.excludeHlights) {
     mark.vHighlights.forEach((hl) => {
-      hl = JSON.parse(JSON.stringify(hl))
-      if (options?.excludeHlihgtComments) {
-        hl.vComments = null
-      } else if (hl.vComments?.length > 0) {
+      hl = assignSenderIdAndHostFromFreezrMeta(JSON.parse(JSON.stringify(hl)))
+
+      if (options?.excludeHlightComments || !hl.vComments || hl.vComments?.length === 0) {
+        hl.vComments = []
+      } else { //(hl.vComments?.length > 0) 
         const vComments = JSON.parse(JSON.stringify(hl.vComments))
         hl.vComments = []
         vComments.forEach((vComment) => {
-          vComment.dateText = overlayUtils.dateOrTime(vComment.vCreated)
-          if (isOwnComment(vComment)) hl.vComments.push(vComment)
+          highlight.vComments = JSON.parse(JSON.stringify(highlight.vComments))
+            .filter(isOwnComment)
+            .map(assignSenderIdAndHostFromFreezrMeta)
+            .map(assignDateTextFromCreatedDate)
+          // vComment.dateText = overlayUtils.dateOrTime(vComment.vCreated)
+          // if (isOwnComment(vComment)) {
+          //   if (!vComment.sender_id) {
+          //     vComment.sender_id = freezrMeta?.userId
+          //     vComment.sender_host = freezrMeta?.serverAddress
+          //   }
+          //   hl.vComments.push(vComment)
+          // }
         })
       }
       newmark.vHighlights.push(hl)
@@ -247,8 +274,8 @@ const mergeHighlightsRemovingDuplicates = function (list1, list2) {
   return cleanedList.sort(sortBycreatedDate) // .reverse()
 }
 const mergeHlightComments = function (list1, list2) {
-  if (!list1 || list1.length === 0) return list2
-  if (!list2 || list2.length === 0) return list1
+  if (!list1 || list1.length === 0) return list2 || []
+  if (!list2 || list2.length === 0) return list1 || []
   list2.forEach(vCom2 => {
     const existing = list1.find(com1 => (com1.text === vCom2.text && com1.vCreated === vCom2.vCreated))
     if (!existing) list1.push(vCom2)
@@ -262,6 +289,7 @@ const addMissingSendersToHLights = function (vHighlights, messageItem) {
     // if (!vHighlight.vCreated || vHighlight.vComments.length === 0) vHighlight.vComments = [{ vCreated: messageItem._date_modified }]
     if (!vHighlight.sender_host) vHighlight.sender_host = messageItem.sender_host
     if (!vHighlight.sender_id) vHighlight.sender_id = messageItem.sender_id
+    if (!vHighlight.vComments) vHighlight.vComments = []
   })
   return vHighlights
 }
@@ -320,8 +348,6 @@ const resetVulogKeyWords = function (logOrMark) { // for vSearchString
       }
     })
   }
-  // console.log('resetting vulog key words', words)
-
   return ' ' + cleanTextForEasySearch(words.join(' ')) + ' ' // adding spaces so in future full words can also be found by seaerch for " word "
 }
 const addToListAsUniqueItems = function (aList, items, transform) {
@@ -393,7 +419,6 @@ const newHlightIdentifier = function () {
 const pasteAsText = function (evt) {
   // https://javascript.plainenglish.io/how-to-copy-paste-text-into-clipboard-using-javascript-1bb5f96325e8#:~:text=clipboard%20to%20get%20access%20to,Clipboard%20to%20avoid%20Promise%20rejections.
   evt.preventDefault()
-  console.log('paste as text')
   navigator.clipboard
     .readText()
     .then(
@@ -402,7 +427,7 @@ const pasteAsText = function (evt) {
         evt.target.innerText = evt.target.innerText.slice(0, position) + cliptext + evt.target.innerText.slice(position)
         moveCursorToEnd(evt.target)
       },
-      err => console.log(err)
+      err => console.warn('pasteAsText:', { err })
     )
 }
 const moveCursorToEnd = (contentEle) => { // if pos is left out, it moves to end
@@ -681,7 +706,6 @@ const overlayUtils = {
       }
     }
     notesDiv.onpaste = function (evt) {
-      console.log('pasted')
       pasteAsText(evt)
     }
     if (mark?.vNote) notesDiv.textContent = mark.vNote
@@ -795,7 +819,6 @@ const overlayUtils = {
     const highlightOuter = options?.existingDiv || overlayUtils.makeEl('div', null, 'highlightOuter')
     if (hLight.sender_id) {
       if (options?.type === 'msgHighLights') highlightOuter.setAttribute('personId', overlayUtils.fullPersonString(hLight.sender_id, hLight.sender_host))
-      // console.log('setting attr for hids show ', { hastype: (options?.type === 'msgHighLights'), type: options?.type, options, person: (hLight.sender_id + '@' + hLight.sender_host) })
       if (hLight._isMarked) {
         const markedDiv = overlayUtils.makeEl('div', null, { scale: '0.4', float: 'right', 'margin-top': '5px', 'margin-bottom': '-10px', 'margin-right': '-5px' })
         markedDiv.className = 'vulog_overlay_bookmark_ch'
@@ -827,7 +850,7 @@ const overlayUtils = {
           if (!options.markOnMarks && !options.logToConvert) throw new Error('need to be able to covert a log if none exist')
           if (!options.markOnMarks) {
             if (!options.markOnBackEnd) throw new Error('need to define options.markOnBackEnd')
-            const markOnMarksResult = await options.markOnBackEnd(options.logToConvert, options, 'bookmark', false, '') // (mark, options, theStar, starWasChosen, addDefaultHashTag)
+            const markOnMarksResult = await options.markOnBackEnd(convertLogToMark(options.logToConvert), options, 'bookmark', false, '') // (mark, options, theStar, starWasChosen, addDefaultHashTag)
             if (!markOnMarksResult || !markOnMarksResult.success) throw new Error('error creating mark - no id ', { markOnMarksResult })
             options.markOnMarks = convertLogToMark(options.logToConvert)
           }
@@ -845,12 +868,11 @@ const overlayUtils = {
           if (!hLightAddRet || !hLightAddRet.success) {
             throw new Error('unable to send message')
           } else {
-            resultMessage.innerText = 'Bookmark added. Continue...'
-            resultMessage.style.cursor = 'pointer'
+            resultMessage.innerText = 'Bookmark added.'
             e.target.style.display = 'none'
             options.existingDiv = getParentWithClass(e.target, 'highlightOuter')
             hLight._isMarked = true
-            resultMessage.onclick = () => { overlayUtils.drawHighlight(purl, hLight, options) }
+            //resultMessage.onclick = () => { overlayUtils.drawHighlight(purl, hLight, options) }
           }
           eltoMark.insertBefore(resultMessage, eltoMark.firstChild);
         } catch (err) {
@@ -892,9 +914,7 @@ const overlayUtils = {
       const saveDiv = overlayUtils.makeEl('div', null, 'vulog_dialogue_butts')
       saveDiv.innerText = 'Save Comment'
       saveDiv.onclick = async function (evt) {
-        console.log('clicked ', { options })
         const resp = await options.hLightCommentSaver(hLight, evt.target.previousSibling.innerText, { purl: options.purl, mark: options.markOnMarks }) // , mark: options.mark
-        console.log('addLightComment sent to background - ', { resp })
         if (!resp || resp.error) {
           let errBox = evt.target.nextSibling
           if (!errBox) {
@@ -958,7 +978,6 @@ const overlayUtils = {
         replyButt.className = 'vulog_overlay_reply'
         replyButt.onclick = function (e) {
           replyButt.style.display = 'none'
-          console.log('oneComment', { purl, options })
           // remove previous ones - currently only sending one comment at a time
           const cardParent = getParentWithClass(e.target, 'cardOuter')
           const previousInterface = cardParent.querySelector('.messageSendingInterface_inlineReply')
@@ -1107,7 +1126,6 @@ const overlayUtils = {
       const { successFullSends, erroredSends } = await vState.environmentSpecificSendMessage({ chosenFriends, text, hLight, markCopy })
       // await sendMessage({ chosenFriends, text, hLight, markCopy })
 
-      console.log('send message result ', { purl, from, successFullSends, erroredSends })
       if (erroredSends && erroredSends.length === 0) {
         delete vState.messages.wip[purl]
       } else if (erroredSends && erroredSends.length > 0) {
@@ -1135,19 +1153,17 @@ const overlayUtils = {
         messageSharingArea.appendChild(result)
         messageSharingArea.style.height = 'auto'
       } else { // from === 'inlineReply'
-        console.log('changing outer')
         outer.innerHTML = ''
         outer.appendChild(result)
       }
 
       const updateStatus = await getAllMessagesAndUpdateStateteFor(purl)
-      if (updateStatus.error) {
+      if (updateStatus && updateStatus.error) {
         outer.appendChild(overlayUtils.makeEl('div', null, {}, ('.. but there was an error confirming the update. Please refresh this page')))
-      } else {
+      } else if (updateStatus) {
         const itemJson = updateStatus.itemJson
         setTimeout(() => {
           const vMessageCommentDetailsDiv = cardParent.querySelector('.vMessageCommentDetails')
-          console.log({ itemJson, cardParent, vMessageCommentDetailsDiv })
           if (vMessageCommentDetailsDiv) overlayUtils.vMessageCommentDetails(purl, itemJson.vComments, vMessageCommentDetailsDiv)
           const vMessageCommentSummaryDiv = cardParent.querySelector('.vMessageCommentSummary')
           if (vMessageCommentSummaryDiv) overlayUtils.vMessageCommentSummary(purl, itemJson.vComments, vMessageCommentSummaryDiv)
@@ -1156,206 +1172,6 @@ const overlayUtils = {
       // redraw messages areaboth forsmallcard and large card
       // add text box to
     }
-
-    // const sendMessage = async function (params) {
-    //   console.log('send message ', { params })
-    //   const { chosenFriends, text, hLight, markCopy } = params
-    //   const successFullSends = []
-    //   const erroredSends = []
-
-    //   // send then clear wip and redraw
-    //   // note if from is inline then all highlights and vcomments are removed 
-
-    //   try {
-    //     if (!chosenFriends || chosenFriends.length === 0) throw new Error('No friends chosen')
-    //     if (!markCopy) throw new Error('mark copy could not be found', purl)
-    //     markCopy.vComments = []
-    //     const createRet = await freepr.ceps.create(markCopy, { app_table: 'com.salmanff.vulog.sharedmarks' })
-    //     if (!createRet || createRet.error) throw new Error('Error creating shared mark: ' + (createRet?.error || 'unknown'))
-    //     markCopy._id = createRet._id
-    //   } catch (error) {
-    //     console.warn('err in sending msg', error)
-    //     return ({ error, successFullSends, erroredSends: chosenFriends })
-    //   }
-
-    //   const msgToSend = {
-    //     messaging_permission: 'message_link',
-    //     contact_permission: 'friends',
-    //     table_id: 'com.salmanff.vulog.sharedmarks',
-    //     record_id: markCopy._id,
-    //     record: markCopy
-    //   }
-
-    //   // should do promises all here
-    //   for (const idx in chosenFriends) {
-    //     const friend = chosenFriends[idx]
-
-    //     msgToSend.recipient_id = friend.username
-    //     msgToSend.recipient_host = friend.serverurl
-    //     msgToSend.record.vComments = [{
-    //       recipient_host: friend.serverurl,
-    //       recipient_id: friend.username,
-    //       sender_host: freezrMeta.serverAddress,
-    //       sender_id: freezrMeta.userId,
-    //       vCreated: new Date().getTime(),
-    //       text: hLight ? '' : text // if it is a highlight then the text goes in the highlights
-    //     }]
-    //     if (hLight) {
-    //       if (from !== 'inlineReply') { console.error('havenot thought through logic of non-inline replies ')}
-    //       hLight.vComments = [{
-    //         recipient_host: friend.serverurl,
-    //         recipient_id: friend.username,
-    //         sender_host: freezrMeta.serverAddress,
-    //         sender_id: freezrMeta.userId,
-    //         vCreated: new Date().getTime(),
-    //         text: text // if it is a highlight then the text goes in the highlights
-    //       }]
-    //       msgToSend.record.vHighlights = [hLight]
-    //     }
-
-    //     try {
-    //       const sendRet = await freepr.ceps.sendMessage(msgToSend)
-    //       if (!sendRet || sendRet.error) throw new Error('Error sending message: ' + (sendRet?.error || 'unknown'))
-    //       successFullSends.push(friend)
-    //     } catch (e) {
-    //       console.error('error sending message', { e })
-    //       const errJson = JSON.parse(JSON.stringify(friend))
-    //       errJson.error = e.message
-    //       erroredSends.push(errJson)
-    //     }
-    //   }
-
-    //   return ({ successFullSends, erroredSends })
-    // }
-
-    // const sendMessageAndRedraw = async function (purl, outer, from) {
-    //   const { successFullSends, erroredSends } = await sendMessage(purl, from)
-    //   console.log('send message result ', { purl, from, successFullSends, erroredSends })
-    //   const cardParent = getParentWithClass(outer, 'cardOuter')
-    //   const messageSharingArea = cardParent.querySelector('.sharingArea_messages')
-    //   if (messageSharingArea) messageSharingArea.setAttribute('vStateChanged', 'true')
-
-    //   const result = overlayUtils.makeEl('div', null, { padding: '10px', color: 'red' })
-    //   if (erroredSends.length === 0) {
-    //     result.innerText = 'Your message was sent successfully!'
-    //   } else if (successFullSends.length === 0) {
-    //     result.innerText = 'There was a problem sending your message. Please try again.'
-    //   } else {
-    //     result.appendChild(overlayUtils.makeEl('div', null, {}, ('Your message was sent successfully to:')))
-    //     successFullSends.forEach(send => result.appendChild(overlayUtils.makeEl('div', null, {}, (friend.nickname + '(' + friend.username + '@' + friend.serverurl + ')'))))
-    //     result.appendChild(document.createElement('br'))
-    //     result.appendChild(overlayUtils.makeEl('div', null, {}, 'There were errors sending your message to:'))
-    //     erroredSends.forEach(friend => result.appendChild(overlayUtils.makeEl('div', null, {}, (friend.nickname + '(' + friend.username + '@' + friend.serverurl + ')'))))
-    //   }
-    //   if (from === 'mainInterface') {
-    //     messageSharingArea.innerHTML = ''
-    //     messageSharingArea.appendChild(result)
-    //     messageSharingArea.style.height = 'auto'
-    //   } else { // from === 'inlineReply'
-    //     console.log('changing outer')
-    //     outer.innerHTML = ''
-    //     outer.appendChild(result)
-    //   }
-
-    //   const updateStatus = await getAllMessagesAndUpdateStateteFor(purl)
-    //   if (updateStatus.error) {
-    //     outer.appendChild(overlayUtils.makeEl('div', null, {}, ('.. but there was an error confirming the update. Please refresh this page')))
-    //   } else {
-    //     const itemJson = updateStatus.itemJson
-    //     setTimeout(() => {
-    //       const vMessageCommentDetailsDiv = cardParent.querySelector('.vMessageCommentDetails')
-    //       console.log({ itemJson, cardParent, vMessageCommentDetailsDiv })
-    //       if (vMessageCommentDetailsDiv) overlayUtils.vMessageCommentDetails(purl, itemJson.vComments, vMessageCommentDetailsDiv)
-    //       const vMessageCommentSummaryDiv = cardParent.querySelector('.vMessageCommentSummary')
-    //       if (vMessageCommentSummaryDiv) overlayUtils.vMessageCommentSummary(purl, itemJson.vComments, vMessageCommentSummaryDiv)
-    //     }, 5000)
-    //   }
-    //   // redraw messages areaboth forsmallcard and large card
-    //   // add text box to
-    // }
-
-    // const sendMessage = async function (purl, from) {
-    //   console.log('send message ', { purl, from })
-    //   // send then clear wip and redraw
-    //   // note if from is inline then all highlights and vcomments are removed 
-    //   const wip = vState.messages.wip[purl]
-    //   const chosenFriends = wip.chosenFriends
-    //   const text = wip.text
-    //   const hLight = wip.hLight
-    //   const successFullSends = []
-    //   const erroredSends = []
-
-    //   const markCopy = convertMarkToSharable((vState.marks.lookups[purl] || getMarkFromVstateList(purl, { excludeHandC: true })), { excludeHlights: (from === 'inlineReply')})
-    //   markCopy._id = null
-
-    //   try {
-    //     if (!chosenFriends || chosenFriends.length === 0) throw new Error('No friends chosen')
-    //     if (!markCopy) throw new Error('mark copy could not be found', purl)
-    //     markCopy.vComments = []
-    //     const createRet = await freepr.ceps.create(markCopy, { app_table: 'com.salmanff.vulog.sharedmarks' })
-    //     if (!createRet || createRet.error) throw new Error('Error creating shared mark: ' + (createRet?.error || 'unknown'))
-    //     markCopy._id = createRet._id
-    //   } catch (error) {
-    //     console.warn('err in sending msg', error)
-    //     return ({ error, successFullSends, erroredSends: chosenFriends })
-    //   }
-
-    //   const msgToSend = {
-    //     messaging_permission: 'message_link',
-    //     contact_permission: 'friends',
-    //     table_id: 'com.salmanff.vulog.sharedmarks',
-    //     record_id: markCopy._id,
-    //     record: markCopy
-    //   }
-
-    //   // should do promises all here
-    //   for (const idx in wip.chosenFriends) {
-    //     const friend = wip.chosenFriends[idx]
-
-    //     msgToSend.recipient_id = friend.username
-    //     msgToSend.recipient_host = friend.serverurl
-    //     msgToSend.record.vComments = [{
-    //       recipient_host: friend.serverurl,
-    //       recipient_id: friend.username,
-    //       sender_host: freezrMeta.serverAddress,
-    //       sender_id: freezrMeta.userId,
-    //       vCreated: new Date().getTime(),
-    //       text: hLight ? '' : text // if it is a highlight then the text goes in the highlights
-    //     }]
-    //     if (hLight) {
-    //       if (from !== 'inlineReply') { console.error('havenot thought through logic of non-inline replies ')}
-    //       hLight.vComments = [{
-    //         recipient_host: friend.serverurl,
-    //         recipient_id: friend.username,
-    //         sender_host: freezrMeta.serverAddress,
-    //         sender_id: freezrMeta.userId,
-    //         vCreated: new Date().getTime(),
-    //         text: text // if it is a highlight then the text goes in the highlights
-    //       }]
-    //       msgToSend.record.vHighlights = [hLight]
-    //     }
-
-    //     try {
-    //       const sendRet = await freepr.ceps.sendMessage(msgToSend)
-    //       if (!sendRet || sendRet.error) throw new Error('Error sending message: ' + (sendRet?.error || 'unknown'))
-    //       successFullSends.push(friend)
-    //     } catch (e) {
-    //       console.error('error sending message', { e })
-    //       const errJson = JSON.parse(JSON.stringify(friend))
-    //       errJson.error = e.message
-    //       erroredSends.push(errJson)
-    //     }
-    //   }
-
-    //   if (erroredSends.length === 0) {
-    //     delete vState.messages.wip[purl]
-    //   } else {
-    //     vState.messages.wip[purl].chosenFriends = erroredSends
-    //   }
-
-    //   return ({ successFullSends, erroredSends })
-    // }
-
     return outer
   },
   setUpMessagePurlWip: function (purl, hLight) {
@@ -1402,7 +1218,6 @@ const overlayUtils = {
     const outer = existingDiv || overlayUtils.makeEl('div', null, { display: 'none' })
     outer.className = 'vMessageCommentDetails'
     outer.innerHTML = ''
-    // console.log('drawing vMessageCommentDetails with ', { vComments })
     if (!vComments || vComments.length === 0) return outer
 
     outer.appendChild(overlayUtils.areaTitle('Messages'))
@@ -1690,13 +1505,13 @@ const overlayUtils = {
     const types = {
       Sharing: { color: 'purple' },
       Messages: { color: 'purple' },
-      Highlights: { color: 'yellowgreen'}
+      Highlights: { color: '#057d47'}
     }
     const h3 = document.createElement(options?.tag || 'div') // g3 clashes with tailwind that can reduce foint size 
     h3.className = type + 'Title'
     h3.innerText = options?.title || type
     h3.style['border-top'] = '1px solid lightgrey'
-    h3.style['padding-top'] = '10px'
+    h3.style['padding-top'] = '20px'
     h3.style['font-size'] = 'medium'
     h3.style['font-weight'] = 'bold'
     h3.style.color = (type && types[type]) ? types[type].color : (options?.color || 'black')
@@ -1717,7 +1532,6 @@ const overlayUtils = {
       colorChoice.onclick = async function (e) {
         const result = await chrome.runtime.sendMessage({ msg: 'setHColor', hColor })
         if (result && !result.error) hLightChosenColor(e.target.parentElement, hColor)
-        console.log('change color result ', { hColor, result })
       }
       colorTable.appendChild(colorChoice)
     }
@@ -1828,7 +1642,6 @@ function getModifiedDate (obj) {
 const convertPasteToText = function (evt) {
   evt.preventDefault()
   const text = evt.clipboardData.getData('text/plain')
-  console.log(evt.target)
   evt.target.innerText += text
 }
 
@@ -1853,6 +1666,4 @@ if (utilsDummy) { // exported vars
   convertDownloadedMessageToRecord()
   mergeMessageRecords()
   convertListerParamsToDbQuery()
-
-  // console.log(isAppInjectedScript)
 }

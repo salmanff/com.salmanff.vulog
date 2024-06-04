@@ -77,7 +77,7 @@ const vState = {
 
     const mark = options.mark
     const vCreated = new Date().getTime()
-    const theComment = { text, vCreated }
+    const theComment = { text, vCreated, sender_id: freezrMeta?.userId, sender_host: freezrMeta?.serverAddress }
 
     let foundHlight = false
     for (let i = 0; i < mark.vHighlights.length; i++) {

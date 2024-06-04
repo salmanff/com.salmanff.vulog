@@ -19,15 +19,15 @@ body {
   padding-bottom: 5px;
 }
 #top_logo{
-    width: 45px;
-    margin-bottom: -20px;
+    width: 55px;
+    margin-bottom: -30px;
     margin-left: 20px;
 } 
 #logo_text, .tmChosen{
   font-weight: bold;
   font-size: 14px;
   margin-right: 20px;
-  color:yellowgreen;
+  color:#057d47;
 }
 .tmClosed{
   font-weight: normal;
@@ -426,9 +426,9 @@ body {
     margin-top: -20px;
 }
 .vulog_title_subtle {
-    font-size: 14px;
-    color: yellowgreen;
-    margin-top: 15px;
+  font-size: 14px;
+  color: yellowgreen;
+  margin-top: 15px;
 }
 .vulog_title_emph {
     font-weight: bold;

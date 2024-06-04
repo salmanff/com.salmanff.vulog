@@ -88,8 +88,8 @@ if (!isIos()) {
         intervaler: null,
         saveList: { vNotes: {}, hLights: { }},
         firstTimeSinceSave: null,
-        THRESHOLD_FOR_FORCED_SAVE: 5000, // 5 seconds before forceSave
-        INTERVALS: 2000, // 2seconds
+        THRESHOLD_FOR_FORCED_SAVE: 3000, // 3 seconds before forceSave
+        INTERVALS: 1000, // 1 seconds
         saveItems: async function () {
           const desktopOverlay = vState.desktop_overlay
           desktopOverlay.saver.firstTimeSinceSave = null
@@ -115,199 +115,170 @@ if (!isIos()) {
 
     vState.showVulogOverlay = function (options) {
       // options fromKeyboard
-      nowShowMarks()
-      // removed in 03-2024 -> no need if working prperly? or need to refresh?
-      // vState.desktop_overlay.extend_timer()
-      // chrome.runtime.sendMessage({ msg: 'getMarkFromVulog', purl: vState.pageInfoFromPage.purl, tabinfo: null }, function (response) {
-      //  onsole.log('vState.showVulogOverlay ', { response })
-      //   vState.currentHColor = response.hcolor || 'green'
-      //   if (response.mark) {
-      //     vState.ownMark = response.mark
-      //     nowShowMarks()
-      //   } else if (!response.freezrMeta?.serverAddress) {
-      //     vState.ownMark = { purl: vState.pageInfoFromPage.purl }
-      //     nowShowMarks(errMsg)
-      //     vState.desktop_overlay.is_open = true
-      //   } else {
-      //     vState.ownMark = { purl: vState.pageInfoFromPage.purl }
-      //     nowShowMarks(errMsg)
-      //     chrome.runtime.sendMessage({ msg: 'getMarkOnlineInBg', purl: vState.pageInfoFromPage.purl, tabinfo: null }, function (response) {})
-      //     setTimeout(function () {
-      //       chrome.runtime.sendMessage({ msg: 'getMarkFromVulog', purl: vState.pageInfoFromPage.purl, tabinfo: null }, function (response) {
-      //         if (response && response.mark) {
-      //           vState.ownMark = response.mark
-      //           nowShowMarks(errMsg)
-      //           vState.desktop_overlay.is_open = true
-      //         }
-      //       })
-      //     }, 2000) // time for server to respond
-      //   }
-      // })
-
-      function nowShowMarks () {
-        // Add overlay
-        let overlay
-        if (document.getElementById('vulog_overlay_outer')) {
-          overlay = document.getElementById('vulog_overlay_outer')
-          overlay.innerHTML = ''
-        } else {
-          overlay = overlayUtils.makeEl('div', 'vulog_overlay_outer', 'cardOuter', '') // cardOuter included so messageMark can remove previousInterface
-        }
-        overlay.style.display = 'block'
-        // if (errMsg) {
-        //   var errDiv = overlayUtils.makeEl('div', 'vulog_overlay_errMsg', null, errMsg)
-        //   overlay.appendChild(errDiv)
-        // }
-
-        overlay.appendChild(overlayUtils.makeEl('div', null, null, 'vulog'))
-
-        const aspan = overlayUtils.makeEl('span', 'vulog_overlay_cross_ch')
-        aspan.onclick = vState.desktop_overlay.close
-        overlay.appendChild(aspan)
-
-        const stardiv = document.createElement('div')
-        stardiv.style['text-align'] = 'center'
-        stardiv.style.margin = '0'
-        stardiv.appendChild(overlayUtils.drawstars((vState.ownMark || parsedPage.props), { markOnBackEnd: vState.markOnBackEnd }))
-
-        overlay.appendChild(stardiv)
-        const notesBox = overlayUtils.drawMainNotesBox(vState.ownMark, { log: vState.pageInfoFromPage, defaultHashTag: vState.defaultHashTag })
-        overlay.appendChild(notesBox)
-        if (options?.fromKeyboard) setTimeout(() => { notesBox.focus() }, 10)
-
-        if (vState.showThis === 'ownMark') {
-          // Add pallette
-          const palletteOuter = overlayUtils.makeEl('div')
-          palletteOuter.style['padding-top'] = '10px'
-          palletteOuter.style.margin = '0'
-          palletteOuter.appendChild(overlayUtils.areaTitle('hlightPaellette', { color: 'yellowgreen', title: 'Highlight Pallette' }))
-          const palletteArea = overlayUtils.makeEl('div', 'vulog_overlay_palletteArea', { display: 'inline-block', margin: 0, 'padding-left': '27px' }, '')
-          palletteArea.appendChild(overlayUtils.drawColorTable(vState.currentHColor))
-          palletteOuter.appendChild(palletteArea)
-          overlay.appendChild(palletteOuter)
-          setTimeout(vState.addPalleteeArea, 5)
-
-          // Add edit_mode
-          const editOuter = overlayUtils.areaTitle('Power mode', { color: 'yellowgreen'})
-          editOuter.style['padding-top'] = '10px'
-          overlay.appendChild(editOuter)
-          const editModeArea = overlayUtils.makeEl('div', 'vulog_overlay_editModeArea', { 'margin-top': '-5px', 'font-size': '18px' }, null)
-          overlay.appendChild(editModeArea)
-          setTimeout(vState.addEditModeButton, 5)
-        }
-
-        const hasSelfHighlights = (vState.ownMark?.vHighlights && vState.ownMark.vHighlights.length > 0)
-        const hasRedirectHighlights = (vState.redirectmark?.vHighlights && vState.redirectmark.vHighlights.length > 0)
-        const hasMessageHighlights = (vState.messageMark?.vHighlights && vState.messageMark.vHighlights.length > 0)
-        let hasHighlights = false
-        let theHighlights
-        let highlightTitle = null
-        let logToConvert = null
-        let markOnMarks
-
-        if (vState.showThis === 'ownMark') {
-          highlightTitle = 'Your highlights!!!'
-          hasHighlights = hasSelfHighlights
-          theHighlights = vState.ownMark?.vHighlights
-          markOnMarks = vState.ownMark
-        } else if (vState.showThis === 'none') {
-          highlightTitle = 'Highhlights hidden'
-          hasHighlights = false
-        } else if (vState.showThis === 'redirectmark') {
-          highlightTitle = hasRedirectHighlights ? 'Shared Highlights' : ''
-          hasHighlights = hasRedirectHighlights
-          theHighlights = vState.redirectmark?.vHighlights
-          logToConvert = vState.redirectmark
-          if (logToConvert && logToConvert.vComments && logToConvert.vComments.length > 0) {
-            overlay.appendChild(overlayUtils.areaTitle("Shared Link", { color: 'purple'}))
-            logToConvert.vComments.forEach(comment => { // currently should only be one
-              comment.sender_host = logToConvert.host
-              comment.sender_id = logToConvert._data_owner
-              const commDiv = overlayUtils.oneComment(logToConvert.purl, comment, { isReceived: true, noReply: true })
-              overlay.appendChild(commDiv)
-            });
-          }
-        } else if (vState.showThis === 'messageMark') {
-          highlightTitle = 'Highlights in Messages'
-          hasHighlights = hasMessageHighlights
-          theHighlights = vState.messageMark?.vHighlights
-          logToConvert = vState.messageMark
-        }
-
-        if (hasHighlights) {
-          const hlightsDiv = overlayUtils.makeEl('div', null, null)
-          hlightsDiv.appendChild(overlayUtils.areaTitle(highlightTitle, { color: 'yellowgreen'}))
-          theHighlights.forEach(hlight => {
-            const isOwn = (vState.showThis === 'ownMark') // || (vState.ownMark?.vHighlights && vState.ownMark?.vHighlights.find(m => m.id === hlight.id)))
-            const showErr = vState.displayErrs && vState.displayErrs.find(m => m.id === hlight.id)
-            const hlightDiv = overlayUtils.drawHighlight(vState.purl, hlight,
-              { isOwn, showErr, showTwoLines: !showErr, logToConvert, markOnMarks, markOnBackEnd: vState.markOnBackEnd, overLayClick: showErr ? null : function() { vState.scrollToHighLight(hlight.id) } }
-            )
-            hlightsDiv.appendChild(hlightDiv)
-          })
-          overlay.appendChild(hlightsDiv)
-        }
-
-        const theselect = overlayUtils.areaTitle('hlightPaellette', { color: 'yellowgreen', title: 'Switch Views' })
-        // add buttons
-        if (vState.showThis === 'ownMark') {
-          if (hasSelfHighlights) {
-            const hideHighs = overlayUtils.makeEl('div', null, 'vulog_overlay_butt', 'Hide Highlights')
-            hideHighs.onclick = function () {
-              chrome.runtime.sendMessage({ msg: 'showThisFromOverlay', showThis: 'none', purl: vState.pageInfoFromPage.purl }, function (response) {
-                if (!response || response.error) {
-                  console.warn('handle error ', response)
-                } else {
-                  // onsole.log(response)// reload
-                  window.location.reload()
-                }
-              })
-            }
-            theselect.appendChild(hideHighs)
-          }
-          if (hasMessageHighlights) {
-            const showMsgHighs = overlayUtils.makeEl('div', null, 'vulog_overlay_butt', 'Show Messages Highlights')
-            showMsgHighs.onclick = function () { 
-              chrome.runtime.sendMessage({ msg: 'showThisFromOverlay', showThis: 'messageMark', purl: vState.pageInfoFromPage.purl }, function (response) {
-                if (!response || response.error) {
-                  console.warn('handle error ', response)
-                } else {
-                  // onsole.log(response)// reload
-                  window.location.reload()
-                }
-              })
-            }
-            theselect.appendChild(showMsgHighs)
-          }
-        } else if (vState.showThis === 'none') {
-          const refresh = overlayUtils.makeEl('div', null, 'vulog_overlay_butt', 'Refresh to show Highlights')
-          refresh.onclick = function () { window.location.reload() }
-          theselect.appendChild(refresh)
-        } else { // messageMark or redriectmark
-          const showSelf = overlayUtils.makeEl('div', null, 'vulog_overlay_butt', 'Refresh')
-          showSelf.onclick = function () { window.location.reload() }
-          theselect.appendChild(showSelf)
-
-          const addhighs = overlayUtils.makeEl('div', null, 'vulog_overlay_butt', 'Copy Highlights')
-          addhighs.onclick = function () {
-            vState.desktop_overlay.copy_highs()
-          }
-          theselect.appendChild(document.createElement('br'))
-          if (vState.showThis === 'redirectmark' && hasRedirectHighlights) {
-            theselect.appendChild(addhighs)
-          } else if (vState.showThis === 'messageMark' && hasMessageHighlights) {
-            theselect.appendChild(addhighs)
-          } 
-        }
-        if (hasMessageHighlights || hasSelfHighlights) overlay.appendChild(theselect)
-
-        if (vState.messageMark) {
-          const messageVcomments = overlayUtils.vMessageCommentDetails(vState.pageInfoFromPage.purl, vState.messageMark.vComments)
-          messageVcomments.style.display = 'block'
-          overlay.appendChild(messageVcomments)
-        }
-        document.body.appendChild(overlay)
+      
+      let overlay
+      if (document.getElementById('vulog_overlay_outer')) {
+        overlay = document.getElementById('vulog_overlay_outer')
+        overlay.innerHTML = ''
+      } else {
+        overlay = overlayUtils.makeEl('div', 'vulog_overlay_outer', 'cardOuter', '') // cardOuter included so messageMark can remove previousInterface
       }
+      overlay.style.display = 'block'
+      // if (errMsg) {
+      //   var errDiv = overlayUtils.makeEl('div', 'vulog_overlay_errMsg', null, errMsg)
+      //   overlay.appendChild(errDiv)
+      // }
+
+      overlay.appendChild(overlayUtils.makeEl('div', null, null, 'vulog'))
+
+      const aspan = overlayUtils.makeEl('span', 'vulog_overlay_cross_ch')
+      aspan.onclick = vState.desktop_overlay.close
+      overlay.appendChild(aspan)
+
+      const stardiv = document.createElement('div')
+      stardiv.style['text-align'] = 'center'
+      stardiv.style.margin = '0'
+      stardiv.appendChild(overlayUtils.drawstars((vState.ownMark || parsedPage.props), { markOnBackEnd: vState.markOnBackEnd }))
+
+      overlay.appendChild(stardiv)
+      const notesBox = overlayUtils.drawMainNotesBox(vState.ownMark, { log: vState.pageInfoFromPage, defaultHashTag: vState.defaultHashTag })
+      overlay.appendChild(notesBox)
+      if (options?.fromKeyboard) setTimeout(() => { notesBox.focus() }, 10)
+
+      if (vState.showThis === 'ownMark') {
+        // Add pallette
+        const palletteOuter = overlayUtils.makeEl('div')
+        palletteOuter.style['padding-top'] = '10px'
+        palletteOuter.style.margin = '0'
+        palletteOuter.appendChild(overlayUtils.areaTitle('hlightPaellette', { color: 'yellowgreen', title: 'Highlight Pallette' }))
+        const palletteArea = overlayUtils.makeEl('div', 'vulog_overlay_palletteArea', { display: 'inline-block', margin: 0, 'padding-left': '27px' }, '')
+        palletteArea.appendChild(overlayUtils.drawColorTable(vState.currentHColor))
+        palletteOuter.appendChild(palletteArea)
+        overlay.appendChild(palletteOuter)
+        setTimeout(vState.addPalleteeArea, 5)
+
+        // Add edit_mode
+        const editOuter = overlayUtils.areaTitle('Power mode', { color: 'yellowgreen'})
+        editOuter.style['padding-top'] = '10px'
+        overlay.appendChild(editOuter)
+        const editModeArea = overlayUtils.makeEl('div', 'vulog_overlay_editModeArea', { 'margin-top': '-5px', 'font-size': '18px' }, null)
+        overlay.appendChild(editModeArea)
+        setTimeout(vState.addEditModeButton, 5)
+      }
+
+      const hasSelfHighlights = (vState.ownMark?.vHighlights && vState.ownMark.vHighlights.length > 0)
+      const hasRedirectHighlights = (vState.redirectmark?.vHighlights && vState.redirectmark.vHighlights.length > 0)
+      const hasMessageHighlights = (vState.messageMark?.vHighlights && vState.messageMark.vHighlights.length > 0)
+      let hasHighlights = false
+      let theHighlights
+      let highlightTitle = null
+      let logToConvert = null
+      let markOnMarks
+
+      if (vState.showThis === 'ownMark') {
+        highlightTitle = 'Your highlights!!!'
+        hasHighlights = hasSelfHighlights
+        theHighlights = vState.ownMark?.vHighlights
+        markOnMarks = vState.ownMark
+      } else if (vState.showThis === 'none') {
+        highlightTitle = 'Highhlights hidden'
+        hasHighlights = false
+      } else if (vState.showThis === 'redirectmark') {
+        highlightTitle = hasRedirectHighlights ? 'Shared Highlights' : ''
+        hasHighlights = hasRedirectHighlights
+        theHighlights = vState.redirectmark?.vHighlights
+        logToConvert = vState.redirectmark
+        if (logToConvert && logToConvert.vComments && logToConvert.vComments.length > 0) {
+          overlay.appendChild(overlayUtils.areaTitle("Shared Link", { color: 'purple'}))
+          logToConvert.vComments.forEach(comment => { // currently should only be one
+            comment.sender_host = logToConvert.host
+            comment.sender_id = logToConvert._data_owner
+            const commDiv = overlayUtils.oneComment(logToConvert.purl, comment, { isReceived: true, noReply: true })
+            overlay.appendChild(commDiv)
+          });
+        }
+      } else if (vState.showThis === 'messageMark') {
+        highlightTitle = 'Highlights in Messages'
+        hasHighlights = hasMessageHighlights
+        theHighlights = vState.messageMark?.vHighlights
+        logToConvert = vState.messageMark
+      }
+
+      if (hasHighlights) {
+        const hlightsDiv = overlayUtils.makeEl('div', null, null)
+        hlightsDiv.appendChild(overlayUtils.areaTitle(highlightTitle, { color: 'yellowgreen'}))
+        theHighlights.forEach(hlight => {
+          const isOwn = (vState.showThis === 'ownMark') // || (vState.ownMark?.vHighlights && vState.ownMark?.vHighlights.find(m => m.id === hlight.id)))
+          const showErr = vState.displayErrs && vState.displayErrs.find(m => m.id === hlight.id)
+          const hlightDiv = overlayUtils.drawHighlight(vState.purl, hlight,
+            { isOwn, showErr, showTwoLines: !showErr, logToConvert, markOnMarks, markOnBackEnd: vState.markOnBackEnd, overLayClick: showErr ? null : function() { vState.scrollToHighLight(hlight.id) } }
+          )
+          hlightsDiv.appendChild(hlightDiv)
+        })
+        overlay.appendChild(hlightsDiv)
+      }
+
+      const theselect = overlayUtils.areaTitle('hlightPaellette', { color: 'yellowgreen', title: 'Switch Views' })
+      // add buttons
+      if (vState.showThis === 'ownMark') {
+        if (hasSelfHighlights) {
+          const hideHighs = overlayUtils.makeEl('div', null, 'vulog_overlay_butt', 'Hide Highlights')
+          hideHighs.onclick = function () {
+            chrome.runtime.sendMessage({ msg: 'showThisFromOverlay', showThis: 'none', purl: vState.pageInfoFromPage.purl }, function (response) {
+              if (!response || response.error) {
+                console.warn('handle error ', response)
+              } else {
+                // onsole.log(response)// reload
+                window.location.reload()
+              }
+            })
+          }
+          theselect.appendChild(hideHighs)
+        }
+        if (hasMessageHighlights) {
+          const showMsgHighs = overlayUtils.makeEl('div', null, 'vulog_overlay_butt', 'Show Messages Highlights')
+          showMsgHighs.onclick = function () { 
+            chrome.runtime.sendMessage({ msg: 'showThisFromOverlay', showThis: 'messageMark', purl: vState.pageInfoFromPage.purl }, function (response) {
+              if (!response || response.error) {
+                console.warn('handle error ', response)
+              } else {
+                // onsole.log(response)// reload
+                window.location.reload()
+              }
+            })
+          }
+          theselect.appendChild(showMsgHighs)
+        }
+      } else if (vState.showThis === 'none') {
+        const refresh = overlayUtils.makeEl('div', null, 'vulog_overlay_butt', 'Refresh to show Highlights')
+        refresh.onclick = function () { window.location.reload() }
+        theselect.appendChild(refresh)
+      } else { // messageMark or redriectmark
+        const showSelf = overlayUtils.makeEl('div', null, 'vulog_overlay_butt', 'Refresh')
+        showSelf.onclick = function () { window.location.reload() }
+        theselect.appendChild(showSelf)
+
+        const addhighs = overlayUtils.makeEl('div', null, 'vulog_overlay_butt', 'Copy Highlights')
+        addhighs.onclick = function () {
+          vState.desktop_overlay.copy_highs()
+        }
+        theselect.appendChild(document.createElement('br'))
+        if (vState.showThis === 'redirectmark' && hasRedirectHighlights) {
+          theselect.appendChild(addhighs)
+        } else if (vState.showThis === 'messageMark' && hasMessageHighlights) {
+          theselect.appendChild(addhighs)
+        } 
+      }
+      if (hasMessageHighlights || hasSelfHighlights) overlay.appendChild(theselect)
+
+      if (vState.messageMark) {
+        const messageVcomments = overlayUtils.vMessageCommentDetails(vState.pageInfoFromPage.purl, vState.messageMark.vComments)
+        messageVcomments.style.display = 'block'
+        overlay.appendChild(messageVcomments)
+      }
+      document.body.appendChild(overlay)
+      
+      vState.desktop_overlay.is_open = true
     }
 
     // fix this
@@ -446,7 +417,7 @@ if (!isIos()) {
                 chrome.runtime.sendMessage({
                   msg: 'addStarFromOverlay',
                   linkUrl: theUrl,
-                  referrer: window.location.href,
+                  referrerUrl: window.location.href,
                   note: textDiv.innerText,
                   theStar: (addToInbox ? 'inbox' : null),
                   props: { url: theUrl }
@@ -469,7 +440,7 @@ if (!isIos()) {
               }
               if (!response.mark || response.mark.vStars.indexOf('inbox') < 0) {
                 const addToInboxEl = overlayUtils.makeEl('div', null, 'vulog_overlay_butt', 'Add to Inbox')
-                addToInboxEl.onclick = function (evt) {
+                addToInboxEl.onclick = async function (evt) {                
                   handleAddToInbox(evt.target.nextSibling, theUrl, true, function(cb) {
                     confirmDiv.innerHTML = 'Added to inbox'
                     setTimeout(function () { if (confirmDiv) confirmDiv.remove() }, 3000)
@@ -482,7 +453,7 @@ if (!isIos()) {
               if (response.mark) {
                 if (response.mark.vNote) notesBox.innerText = response.mark.vNote
               } else if (response.defaultHashTag) {
-                notesBox.innerText = '#' + response.defaultHashTag
+                notesBox.innerText = '#' + response.defaultHashTag + ' '
               }
               notesBox.setAttribute('placeholder', 'Note for link')
               notesBox.setAttribute('contenteditable', 'true')
@@ -516,6 +487,16 @@ if (!isIos()) {
 
     chrome.runtime.onMessage.addListener( // messageMark from background
       function (request, sender, sendResponse) {
+        if (request.msg === 'markUpdated') {
+          if (request.updatedMark?.purl === vState.pageInfoFromPage.purl) {
+            vState.ownMark = request.updatedMark
+            // todo - edge case: highlights could ahve changed too, so need to check if they have changed
+            // also need to update for new messages
+            if (vState.desktop_overlay.is_open) vState.showVulogOverlay()
+          } else {
+            console.warn('markUpdated sent to page but purl is different??? snbh')
+          }
+        }
         // 2023 - 06 -> not used?
         // if (request.action === 'highlight_selection') {
         //   highlightSelection()
@@ -982,6 +963,7 @@ const environmentSpecificSyncAndGetMessage = async function (purl) {
 }
 const getAllMessagesAndUpdateStateteFor = async function (purl) {
   const retInfo = await environmentSpecificSyncAndGetMessage(purl)
+  if (!retInfo) return { }
   if (retInfo.error) return { error: retInfo.error }
 
   const mergedItems = retInfo.mergedMessages

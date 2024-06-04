@@ -123,7 +123,6 @@ const vState = {
       newItems.forEach(item => {
         let unfilteredItemIdx
         if (item._id) unfilteredItemIdx = vState.marks.unfilteredItems.findIndex(m => m._id === item._id)
-        console.log('found unflitered item ', { unfilteredItemIdx })
         if (unfilteredItemIdx < 0) unfilteredItemIdx = vState.marks.unfilteredItems.find(m => m.fj_local_temp_unique_id === item.fj_local_temp_unique_id && m.purl === item.purl)
         if (unfilteredItemIdx > -1) {
           vState.marks.unfilteredItems[unfilteredItemIdx] = item
@@ -199,7 +198,7 @@ const initState = async function () {
 
   vState.publicUser = window.location.pathname.slice((window.location.pathname.indexOf('/papp/') + '/papp/'.length), window.location.pathname.indexOf('/com.salmanff.vulog') )
   dg.el('top_logo').onerror = function () {
-    console.log('didnt get image ' + '/publicfiles/@' + vState.publicUser + '/info.freezr.account/profilePict.jpg')
+    // onsole.log('didnt get image ' + '/publicfiles/@' + vState.publicUser + '/info.freezr.account/profilePict.jpg')
     // dg.el('top_logo').src = '/app_files/' + vState.publicUser + '/com.salmanff.vulog/public/static/logo.png'
     // dg.el('top_logo').onerror = null
   } 
@@ -217,7 +216,6 @@ const initState = async function () {
           table_id: 'dev.ceps.privatefeeds.codes',
           permission: 'privateCodes'
         })
-      console.log('got access ret', { accessRet })
       // options - data_owner_user table_id permission
       vState.feedcodes = await freepr.feps.postquery({
         // app_table: 'dev.ceps.privatefeeds.codes',
@@ -246,7 +244,7 @@ const initState = async function () {
   // TODO Add all other filters here
   resetHeaders()
 
-  console.log({ vState })
+  // onsole.log({ vState })
 
   document.body.style['overflow-x'] = 'hidden'
 

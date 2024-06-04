@@ -80,6 +80,8 @@ lister.drawAllItemsForList = async function (vState) {
   const list = vState.queryParams.list
   const mainDiv = vState.divs.main
   mainDiv.innerHTML = ''
+  
+  // onsole.log('drawAllItemsForList', { list })
 
   window.scrollTo(0, 0)
 
@@ -92,8 +94,9 @@ lister.drawAllItemsForList = async function (vState) {
 
   // populate marks to show some of the marks on history in any case
   if (!vState.marks && !vState.isPublicView) {
-    // vState.marks = lister.emptyStatsObj()
-    // vState.marks.lookups = {}
+    vState.marks = lister.emptyStatsObj()
+    vState.marks.lookups = {}
+    
     try {
       await lister.getMoreAndUpdateCountStatsFor('marks', vState)
     } catch (e) {
@@ -106,6 +109,9 @@ lister.drawAllItemsForList = async function (vState) {
     if (list === 'tabs') console.error('snbh drawAllItemsForList')
     lister.drawCardsOnMainDiv(list, vState[list].unfilteredItems, mainDiv)
     vState.divs.spinner.style.display = 'none'
+  } else if (!gotErr && vState[list] && vState[list].unfilteredItems.length === 0) {
+    vState.divs.spinner.style.display = 'none'
+    lister.endCard.showNoMore()
   } else if (!gotErr) {
     try {
       const newItems = await lister.getMoreItems(vState)
@@ -117,7 +123,7 @@ lister.drawAllItemsForList = async function (vState) {
     }
   }
   if (gotErr) {
-    vState.showWarning('There was a problem connecting to the server. Sorry.')
+    vState.showWarning('There was a problem syncing with the server. Sorry.', 2000)
   } else {
     setTimeout(() => {
       if (list !== 'tabs') lister.filterItemsInMainDivOrGetMore(vState, 'initialLoad')
@@ -175,7 +181,7 @@ lister.endCard = {
       style: { display: 'none', margin: '50px 10px', 'text-align': 'center', 'border-radius': '5px', background: 'lightgrey', padding: '5px' }
     }, 'Nothing more to show.')
 
-    const loadingButt = dg.div({ style: { width: '20px', margin: '50px 90px 10px' } }, dg.img({ src: (freezr.app?.isWebBased ? '/app_files/public/info.freezr.public/public/static/ajaxloaderBig.gif' : '/freezr/static/ajaxloaderBig.gif') }))
+    const loadingButt = dg.div({ style: { width: '20px', margin: '50px 90px 10px' } }, smallSpinner() )
     //     const loadingButt = dg.div({ style: { width: '20px', margin: '50px 90px 10px' } }, dg.img({ src: (freezr.app?.isWebBased ? '/app_files/@public/info.freezr.public/public/static/ajaxloaderBig.gif' : '/freezr/static/ajaxloaderBig.gif') }))
 
     return dg.div({ style: { height: '200px', width: '200px', margin: '25px 15px 65px 15px', 'vertical-align': 'center', display: 'none' } },
@@ -195,11 +201,36 @@ lister.endCard = {
   },
   showNoMore: function () {
     const moreButt = dg.el('vulogMoreButt', { clear: true, hide: true })
-    // const endCard = moreButt.parentElement
-    // endCard.style.display = 'block'
     moreButt.style.display = 'none'
-    moreButt.nextSibling.style.display = 'block'
+    const nomoreButt = moreButt.nextSibling
+    let text = ''
+    const list = vState.queryParams.list
+    if (!vState[list].unfilteredItems || vState[list].unfilteredItems.length === 0) {
+      switch (list) {
+        case 'marks':
+          text = "You don't have any bookmarks yet. To book mark a page, click the extention icon on the top right of your browser window and mark it with a star or an inbox."
+          break
+        case 'history':
+          text = 'hiper.cards is not logging your browsing history. To log browsing history go to settings and enable that.'
+          break
+          case 'tabs':
+            text = 'Tabs will be added here soon.'
+            break
+        case 'messages':
+          text = vState.freezrMeta.userId ?
+            'To send your bookmark as a message, click the hiper.cards icon on the top right of your browser window to see your Sharing options.' :
+            'To be able to send and receive message, you need to log in to a CEPS compatible server. Go to Settings for more guidance.'
+          break
+        default:
+          text = 'Nothing more to show !'
+      }
+    }
+    nomoreButt.innerText = text || 'Nothing more to show!!'
+    nomoreButt.style.display = 'block'
     moreButt.nextSibling.nextSibling.style.display = 'none' // loading
+
+    const endCard = moreButt.parentElement
+    endCard.style.display = 'block'
   },
   hide: function () {
     const moreButt = dg.el('vulogMoreButt', { clear: true, hide: true })
@@ -336,6 +367,7 @@ lister.drawCardsOnMainDiv = function (list, items, mainDiv) {
         }
       }
     })
+    lister.endCard.showNoMore()
   }
 }
 
@@ -394,29 +426,9 @@ lister.drawmarkItem = function (markOnMark, vState, opt = {}) {
 
   itemdiv.appendChild(lister.imageBox(markOnMark.image))
 
-  const hasHighlights = (markOnMark.vHighlights && markOnMark.vHighlights.length > 0)
-  const summarySharingAndHighlights = dg.div({
-    className: 'summarySharingAndHighlights',
-    style: { display: 'grid', 'grid-template-columns': (hasHighlights ? '1fr 1fr' : '1fr'), cursor: 'pointer', padding: '2px' }
-  })
-  if (markOnMark.vHighlights && markOnMark.vHighlights.length > 0) {
-    const highlightSum = dg.div({ style: { overflow: 'hidden', color: 'yellowgreen', 'padding-top': '3px' } },
-      dg.div((markOnMark.vHighlights.length + ' highlights'),
-        dg.div({ style: { overflow: 'hidden', 'text-overflow': 'ellipsis', height: '18px', 'margin-bottom': '-5px' } }, 'Click to see')))
-    highlightSum.onclick = async function () { await lister.setItemExpandedStatus(lister.idFromMark(markOnMark), vState) }
-    summarySharingAndHighlights.appendChild(highlightSum)
-  } else {
-    summarySharingAndHighlights.appendChild(dg.div(dg.div()))
-  }
-
-  const sharingSpan = vState.isLoggedIn ? lister.allPeopleSharedWith(markOnMark) : dg.span('Log in to share link')
-  const sharingButt = dg.div(
-    { style: { 'text-align': 'center', color: 'purple', height: '32px', overflow: 'hidden', padding: '2px 5px 2px 5px' } }, sharingSpan)
-  sharingButt.onclick = vState.isLoggedIn
-    ? async function () { await lister.setItemExpandedStatus(lister.idFromMark(markOnMark), vState) }
-    : function () { window.open('logInPage', '_self') }
-  summarySharingAndHighlights.appendChild(sharingButt)
-  itemdiv.appendChild(summarySharingAndHighlights)
+  const summaryOuter = dg.div({ className: 'summarySharingAndHighlights' })
+  summaryOuter.appendChild(lister.summarySharingAndHighlights(markOnMark))
+  itemdiv.appendChild(summaryOuter)
 
   const notesBox = overlayUtils.drawMainNotesBox(markOnMark, { mainNoteSaver: vState.mainNoteSaver })
   notesBox.style.margin = '0px 0px 5px 0px'
@@ -453,6 +465,29 @@ lister.drawmarkItem = function (markOnMark, vState, opt = {}) {
   itemdiv.appendChild(lister.newDrawHighlights(markOnMark.purl, [], msgHighLightoptions)) //
 
   return lister.addCard2ndOuter(itemdiv, 'marks')
+}
+lister.summarySharingAndHighlights = function (markOnMark) {
+  const hasHighlights = (markOnMark.vHighlights && markOnMark.vHighlights.length > 0)
+  const summarySharingAndHighlights = dg.div({
+    style: { display: 'grid', 'grid-template-columns': (hasHighlights ? '1fr 1fr' : '1fr'), cursor: 'pointer', padding: '2px' }
+  })
+  if (markOnMark.vHighlights && markOnMark.vHighlights.length > 0) {
+    const highlightSum = dg.div({ style: { overflow: 'hidden', color: '#057d47', 'padding-top': '3px' } },
+      dg.div((markOnMark.vHighlights.length + ' highlights'),
+        dg.div({ style: { overflow: 'hidden', 'text-overflow': 'ellipsis', height: '18px', 'margin-bottom': '-5px' } }, 'Click to see')))
+    highlightSum.onclick = async function () { await lister.setItemExpandedStatus(lister.idFromMark(markOnMark), vState) }
+    summarySharingAndHighlights.appendChild(highlightSum)
+  } else {
+    summarySharingAndHighlights.appendChild(dg.div(dg.div()))
+  }
+
+  const sharingSpan = vState.isLoggedIn ? lister.allPeopleSharedWith(markOnMark) : dg.span('Expand for details')
+  const sharingButt = dg.div(
+    { style: { 'text-align': 'center', color: 'purple', height: '32px', overflow: 'hidden', padding: '2px 5px 2px 5px' } }, sharingSpan)
+  sharingButt.onclick = async function () { await lister.setItemExpandedStatus(lister.idFromMark(markOnMark), vState) }
+    // : function () { window.open('logInPage', '_self') }
+  summarySharingAndHighlights.appendChild(sharingButt)
+  return summarySharingAndHighlights
 }
 lister.drawpublicmarkItem = function (markOnMark, vState, opt = {}) {
   const { fromAutoUpdate } = opt
@@ -521,7 +556,7 @@ lister.drawpublicmarkItem = function (markOnMark, vState, opt = {}) {
     titleOuter.appendChild(title)
 
     //  display: 'block', 'text-align': 'right', padding: '5px 0px', width: '100%',
-    const openWithVulog = dg.a({ style: { float: 'right', 'font-size': 'small', 'font-weight': 'normal' } }, 'Open with vulog')
+    const openWithVulog = dg.a({ style: { float: 'right', 'font-size': 'small', 'font-weight': 'normal' } }, 'Open with hiper.cards')
     openWithVulog.setAttribute('href', '/' + markOnMark._id + '?vulogredirect=true')
     openWithVulog.setAttribute('target', '_blank')
     titleOuter.firstChild.appendChild(openWithVulog)
@@ -855,7 +890,8 @@ lister.setItemExpandedStatus = async function (id, vState) {
     const logOrMsgToDraw = mark || (list === 'history' ? convertLogToMark(log) : convertLogToMark(msgRecord))
 
     const stars = overlayUtils.drawstars(logOrMsgToDraw, {
-      drawTrash: false,
+      drawTrash: (list === 'marks'),
+      trashFloatHide: (list === 'marks'),
       showBookmark: !mark,
       markOnBackEnd: vState.markOnBackEnd,
       logToConvert: vState.logToConvert
@@ -863,6 +899,11 @@ lister.setItemExpandedStatus = async function (id, vState) {
     const starDiv = theDiv.querySelector('.starsOnCard')
     starDiv.innerHTML = ''
     starDiv.appendChild(stars)
+    starDiv.style['margin-right'] = '40px'
+    const trash = starDiv.querySelector('.vulog_overlay_trash')
+    if (trash) trash.style.display = 'block'
+    const summarySharingAndHighlights = theDiv.querySelector('.summarySharingAndHighlights')
+    if (summarySharingAndHighlights) summarySharingAndHighlights.style.display = 'none' // redundant with below - added here so it happens at starts
     const notesBox = overlayUtils.drawMainNotesBox(logOrMsgToDraw, { mainNoteSaver: vState.mainNoteSaver })
     const NoteDiv = theDiv.querySelector('.vNote')
     if (NoteDiv) {
@@ -892,10 +933,12 @@ lister.setItemExpandedStatus = async function (id, vState) {
     }
 
     // DO HIGLIGHTS AND DO SHARING
+  } else {
+    theDiv.querySelector('.starsOnCard').style['margin-right'] = '0'
   }
   if (!vState.messages) vState.messages = {}
   if (!vState.messages.unfilteredItems) vState.messages.unfilteredItems = []
-  if (doExpand && vState.queryParams.list !== 'messages' && vState.messages?.unfilteredItems && !vState.messages.unfilteredItems.find((item) => item.purl === purl)) {
+  if (vState.freezrMeta?.userId && doExpand && vState.queryParams.list !== 'messages' && vState.messages?.unfilteredItems && !vState.messages.unfilteredItems.find((item) => item.purl === purl)) {
     const updateStatus = await getAllMessagesAndUpdateStateteFor(purl)
     if (updateStatus.error) console.warn('todo - Need to handle error on update') // todo - have an error box on the card and show this ??
   }
@@ -926,7 +969,7 @@ lister.setItemExpandedStatus = async function (id, vState) {
         el.style.display = doExpand ? 'block' : 'none' // redundant
         if (doExpand && el.className === 'sharingDetailsSkeleton') {
           setTimeout(async function () {
-            if (doExpand && !vState.sharedmarks?.lookups[purl]) {
+            if (vState.freezrMeta?.userId && doExpand && !vState.sharedmarks?.lookups[purl]) {
               if (!vState.sharedmarks) vState.sharedmarks = {}
               if (!vState.sharedmarks.lookups) vState.sharedmarks.lookups = {}
               try {
@@ -1046,7 +1089,7 @@ lister.domainSpanWIthRefInner = function (markOrLog, expandedView) {
         src: (markOrLog.vulog_favIconUrl ? markOrLog.vulog_favIconUrl : (this.getdomain(markOrLog.url) + '/favicon.ico')),
         onerror: function () {
           this.onerror = null
-          this.src = 'static/favicon_www.png'
+          this.src = '/static/faviconGeneric.png'
         }
       })
     ),
@@ -1090,7 +1133,7 @@ lister.domainSpan = function (markOrLog) {
         src: (markOrLog.vulog_favIconUrl ? markOrLog.vulog_favIconUrl : (this.getdomain(markOrLog.url) + '/favicon.ico')),
         onerror: function () {
           this.onerror = null
-          this.src = 'favicon_www.png'
+          this.src = '/static/faviconGeneric.png'
         }
       })
     ),
@@ -1139,7 +1182,7 @@ lister.newDrawHighlights = function (purl, hLights, options) {
   const innerHighs = options?.existingDiv || dg.div({ className: options.type, style: { display: 'none' } })
   if (hLights && hLights.length > 0) {
     const title = (options?.type === 'msgHighLights' ? 'Highlights in Messages' : 'Your Highlights')
-    innerHighs.appendChild(overlayUtils.areaTitle('Highlights', { display: 'block', title, color: (options?.type === 'msgHighLights' ? 'purple' : 'yellowgreen') }))
+    innerHighs.appendChild(overlayUtils.areaTitle('Highlights', { display: 'block', title, color: (options?.type === 'msgHighLights' ? 'purple' : '#057d47') }))
 
     const hLightOpts = JSON.parse(JSON.stringify(options))
     hLightOpts.include_delete = true
@@ -1153,6 +1196,9 @@ lister.newDrawHighlights = function (purl, hLights, options) {
     hLights.forEach(hlight => {
       innerHighs.appendChild(overlayUtils.drawHighlight(purl, hlight, hLightOpts))
     })
+  } else if (!vState.freezrMeta?.userId && options?.type !== 'msgHighLights') { // ie relatively new user
+    innerHighs.appendChild(overlayUtils.areaTitle('Highlights', { display: 'block', title: 'Highlights', color: (options?.type === 'msgHighLights' ? 'purple' : '#057d47') }))
+    innerHighs.appendChild(dg.div({ style: { color: 'grey', padding: '10px' } }, 'You can highlight text on pages by selecting the text and right-clicking on it to see your menu options.'))
   }
   return innerHighs
 }
@@ -1214,7 +1260,12 @@ lister.sharingDetailsSkeleton = function (purl, options) {
     SHARING_MENU_TYPES.forEach(type => menuDetails.appendChild(drawEmptySharingSubsection(type)))
   }
   outer.appendChild(menuDetails)
-  setTimeout(function () { expandSection(summary, { height: '180px' }) }, 100)
+  setTimeout(function () { 
+    expandSection(summary, { height: '180px' })
+    // need to set these as 'transitioned' doesnt get triggered when hidden
+    summary.style.height = null
+    summary.setAttribute('data-collapsed', 'false')
+  }, 100)
   return outer
 }
 lister.postErrInSharingDetails = function (sharingDiv) {
@@ -1241,9 +1292,9 @@ lister.redrawSharingDetails = function (sharingDiv, options) {
   // find message in vState using purl
   if (!purl) {
     sharingDiv.appendChild(dg.div('Internal Error - no purl associated with this.'))
-  } if (!vState.isLoggedIn) {
-    sharingDiv.appendChild(dg.div('You need to be logged into a server to share bookmmarks')) // todo -> login link if on extension
-  } if (vState.offlineCredentialsExpired) {
+  } else if (!vState.isLoggedIn) {
+    sharingDiv.appendChild(dg.div('. . .')) // todo -> login link if on extension
+  } else if (vState.offlineCredentialsExpired) {
     sharingDiv.appendChild(dg.div('Your credentials have expired. Please login again.')) // todo -> login link if on extension
   } else {
     if (perms.isLoggedIn) {
@@ -1343,10 +1394,11 @@ lister.makePublicShareButton = function (opts) {
     onclick: async function (e) {
       const buttonDiv = e.target
       buttonDiv.innerHTML = ''
-      buttonDiv.appendChild(dg.img({
-        src: '/app_files/@public/info.freezr.public/public/static/ajaxloaderBig.gif',
-        style: { width: '15px', 'margin-top': '-4px', 'margin-bottom': '-4px' }
-      }))
+      buttonDiv.appendChild(smallSpinner({ width: '15px', 'margin-top': '-4px', 'margin-bottom': '-4px' }))
+  // dg.img({
+  //       src: '/app_files/@public/info.freezr.public/public/static/ajaxloaderBig.gif',
+  //       style: { width: '15px', 'margin-top': '-4px', 'margin-bottom': '-4px' }
+  //     }))
       const result = await onlineAction()
       if (result?.error) {
         buttonDiv.innerHTML = buttonText || DEFAULTEXT
@@ -1369,9 +1421,9 @@ lister.summaryOfSharingOptions = function (purl, perms, options) {
   outer.setAttribute('shareType', 'none')
 
   if (!perms.isLoggedIn) {
-    outer.appendChild(dg.div('Connect to a freezr server to be able to share your bookmarks, notes and highlights. If you are connected to a freezr server, you will be able to share your bookmarks and highlight, either publicl;y, or by messaging them privately to your friends.'))
-    outer.appendChild(dg.div(dg.br(), dg.div(dg.span('If you already have a feezr server, log in '), dg.a({ href: '/main/settings.html' }, 'here.'))))
-    outer.appendChild(dg.div(dg.br(), dg.a({ href: 'https://www.freezr.info' }, 'Cleck here to find out more about setting up a freezr server.')))
+    outer.appendChild(dg.span({ style: { color: 'darkgrey' } }, 'Connect to a freezr server to be able to share your bookmarks, notes and highlights. '))
+    outer.appendChild(dg.a({ href: 'https://www.freezr.info' }, 'Cleck here to find out more about setting up a freezr server.'))
+    outer.appendChild(dg.div(dg.br(), dg.div({ style: { 'color': 'grey' } }, dg.span('If you already have a feezr server, log in '), dg.a({ href: '/main/settings.html' }, 'on the setting page.'))))
     return outer
   }
   outer.appendChild(dg.br())
@@ -1484,7 +1536,10 @@ drawSharingSubsection._public = function (purl, options) {
             const shareRet = await freepr.perms.shareRecords(publicMark._id, { grantees: ['_public'], name: 'public_link', action: 'grant', table_id: 'com.salmanff.vulog.sharedmarks' })
             if (!shareRet || shareRet.error) throw new Error('Error sharing: ' + (shareRet?.error || 'unknown'))
             outer.innerHTML = ''
-            outer.appendChild(dg.div({ style: { padding: '10px', color: 'red' } }, 'Your bookmark was republished.'))
+            outer.appendChild(dg.div(
+              dg.div({ style: { padding: '10px', color: 'red' } }, 'Your bookmark was republished.'), 
+              dg.a({ style: { margin: '10px' }, href: vState.freezrMeta.serverAddress + '/@' + vState.freezrMeta.userId + '/com.salmanff.vulog.sharedmarks/' + newMark._id, target: '_blank' }, 'You can find it here.')
+            ))
             await refreshSharedMarksinVstateFor(purl)
             outer.setAttribute('vStateChanged', 'true')
             return shareRet
@@ -1559,7 +1614,10 @@ drawSharingSubsection._public = function (purl, options) {
             const shareRet = await freepr.perms.shareRecords(createRet._id, { grantees: ['_public'], name: 'public_link', action: 'grant', table_id: 'com.salmanff.vulog.sharedmarks' })
             vState.sharedmarks.lookups[purl].push(createRet)
             outer.innerHTML = ''
-            outer.appendChild(dg.div({ style: { padding: '10px', color: 'red' } }, 'Your bookmark was published.'))
+            outer.appendChild(dg.div(
+              dg.div({ style: { padding: '10px', color: 'red' } }, 'Your bookmark was published.'),
+              dg.a({ style: { margin: '10px' }, href: vState.freezrMeta.serverAddress + '/@' + vState.freezrMeta.userId + '/com.salmanff.vulog.sharedmarks/' + createRet._id, target: '_blank' }, 'You can find it here.')
+            ))
             await refreshSharedMarksinVstateFor(purl)
             outer.setAttribute('vStateChanged', 'true')
             return shareRet
@@ -1696,7 +1754,7 @@ drawSharingSubsection._privatelink = function (purl, options) {
         buttonText: 'Create Link',
         successText: 'Your link was created. Press the Private button again to continue.',
         onlineAction: async function () {
-          const markCopy = convertMarkToSharable((mark || getMarkFromVstateList(purl, { excludeHandC: true })))
+          const markCopy = convertMarkToSharable((mark || getMarkFromVstateList(purl, { excludeHandC: true })), { excludeHlights: !mark })
           if (messageBox.innerText) markCopy.vComments = [{ text: messageBox.innerText, vCreated: new Date().getTime() }]
           try {
             if (!markCopy) throw new Error('No mark or log to convert')
@@ -1760,7 +1818,7 @@ drawSharingSubsection._privatefeed = function (purl, options) {
                 const buttonHolder = button.parentElement
                 buttonHolder.innerHTML = ''
 
-                const markCopy = convertMarkToSharable((mark || getMarkFromVstateList(purl, { excludeHandC: true })))
+                const markCopy = convertMarkToSharable((mark || getMarkFromVstateList(purl, { excludeHandC: true })), { excludeHlights: !mark })
                 if (!markCopy) throw new Error('No mark or log to convert')
                 markCopy.isPublic = false
                 // deal with case of crashing here - isPublic is true but it is not shared.
@@ -2223,8 +2281,6 @@ lister.showHideCardsBasedOnFilters = {
 lister.showHideCard = function (cardDiv, doShow, options) {
   // options: isFiltered vCollapsible
   const parent = cardDiv.parentElement
-  const shouldCollpase = (parent.getAttribute('vCollapsible')) // options && !options.isFiltered && 
-  // parent.style.width = doShow ? (shouldCollpase ? '0' : '200px') : '0'
 
   if (vState.viewType === 'fullHeight') {
     parent.style.height = doShow ? '100%' : '0'
@@ -2234,11 +2290,37 @@ lister.showHideCard = function (cardDiv, doShow, options) {
   }
   // parent.style.margin = doShow ? '15px' : '0'
 
-  if (doShow && shouldCollpase) lister.setCardAsCollapsible(cardDiv, true, options)
-  if (!doShow && options?.uncollpasePrevious) { // uncollpase a card if the card in front of it has been filtered out
-    const prevCardParent = parent.previousSibling
-    if (prevCardParent && prevCardParent.getAttribute('vCollapsible') && prevCardParent.style.width !== '0px') lister.setCardAsCollapsible(prevCardParent.firstChild, false, options)
+  if (options?.list === 'history'){
+    const shouldCollpase = (parent.getAttribute('vCollapsible') && !(vState.queryParams.words))
+    lister.setCardAsCollapsible(cardDiv, (doShow && shouldCollpase), options)
+    if (!doShow) cardDiv.parentElement.style['margin-right'] = 0
+    // if (!doShow && options?.uncollpasePrevious) { // uncollpase a card if the card in front of it has been filtered out
+    //   const prevCardParent = parent.previousSibling
+    //   if (prevCardParent && prevCardParent.getAttribute('vCollapsible') && prevCardParent.style.width !== '0px') lister.setCardAsCollapsible(prevCardParent.firstChild, false, options)
+    // }
   }
+
+    // orginal version
+    // const shouldCollpase = (parent.getAttribute('vCollapsible')) 
+    //   if (doShow && shouldCollpase) lister.setCardAsCollapsible(cardDiv, true, options)
+    //   if (!doShow && options?.uncollpasePrevious) { // uncollpase a card if the card in front of it has been filtered out
+    //     const prevCardParent = parent.previousSibling
+    //     if (prevCardParent && prevCardParent.getAttribute('vCollapsible') && prevCardParent.style.width !== '0px') lister.setCardAsCollapsible(prevCardParent.firstChild, false, options)
+    //   }
+    
+
+  // if (options.list === 'history') {
+  //   if (doShow && shouldCollpase) lister.setCardAsCollapsible(cardDiv, true, options)
+  //   if (!doShow) {
+  //     cardDiv.style.margin = 0
+  //     if (options?.uncollpasePrevious) { // uncollpase a card if the card in front of it has been filtered out
+  //       let prevCardParent = parent.previousSibling
+  //       while (prevCardParent && prevCardParent.style.width === '0px') prevCardParent = prevCardParent.previousSibling
+  //       if (prevCardParent && prevCardParent.getAttribute('vCollapsible') && prevCardParent.style.width !== '0px') lister.setCardAsCollapsible(prevCardParent.firstChild, false, options)
+  //     }
+  //   }
+  // }
+
   if (vState.viewType === 'fullHeight') {
     cardDiv.style.transform = doShow ? 'rotateX(0deg)' : 'rotateX(90deg)'
   } else {
@@ -2312,6 +2394,7 @@ lister.getAllMessagesAndMerge = async function (vState) {
 }
 const getAllMessagesAndUpdateStateteFor = async function (purl) {
   const retInfo = await vState.environmentSpecificSyncAndGetMessage(purl)
+  if (!retInfo) return {}
   if (retInfo.error) return { error: retInfo.error }
 
   const mergedItems = retInfo.mergedMessages
@@ -2409,7 +2492,7 @@ lister.getMoreAndUpdateCountStatsFor = async function (list, vState) {
   if (vState.loadState.gotAll) return []
 
   const { newItems, typeReturned } = await vState.environmentSpecificGetOlderItems(list, { getCount: SEARCHCOUNT, dates: statsObject.dates, queryParams: lister.getQueryParams(), gotCount: statsObject.unfilteredItems.length, alreadyGotFIlteredItems: (statsObject.filteredItems.length > 0) }) // gotCount no longer needed??
-  
+  // onsole.log('getMoreAndUpdateCountStatsFor newItems', {newItems, typeReturned, dates: statsObject.dates })
   // environmentSpecificGetOlderItems judges whether to return unfiltered or filtered items -
   // ideally a number of unfiltered items are returned so graphics can be nade nice.. adn then the filtered items are retirned so asd to make search more efficient
 
@@ -2450,22 +2533,24 @@ lister.getMoreAndUpdateCountStatsFor = async function (list, vState) {
     const openTabs = {}
     const closedTabs = {}
 
-    newItems.currentTabs.forEach(openTab => {
-      if (!openTabs[openTab.windowId]) openTabs[openTab.windowId] = {}
-      if (newItems.logDetailsInRAM[openTab.id]) {
-        openTabs[openTab.windowId][openTab.id] = newItems.logDetailsInRAM[openTab.id]
-        // iterate through and remove duplicates
-      } else {
-        openTabs[openTab.windowId][openTab.id] = [openTab]
-        // covnert to log type object purl, title, tabid, tabWindowId
+    if (newItems?.currentTabs && newItems?.currentTabs.lemngth > 0) {
+      newItems.currentTabs.forEach(openTab => {
+        if (!openTabs[openTab.windowId]) openTabs[openTab.windowId] = {}
+        if (newItems.logDetailsInRAM[openTab.id]) {
+          openTabs[openTab.windowId][openTab.id] = newItems.logDetailsInRAM[openTab.id]
+          // iterate through and remove duplicates
+        } else {
+          openTabs[openTab.windowId][openTab.id] = [openTab]
+          // covnert to log type object purl, title, tabid, tabWindowId
+        }
+        delete newItems.logDetailsInRAM[openTab.id]
+      })
+      for (const [tabId, closedTab] of Object.entries(newItems.logDetailsInRAM)) {
+        const tabWindowId = closedTab[0].tabWindowId || 'unknownWindow'
+        if (!closedTabs[tabWindowId]) closedTabs[tabWindowId] = {}
+        closedTabs[tabWindowId][tabId] = closedTab
       }
-      delete newItems.logDetailsInRAM[openTab.id]
-    })
-    for (const [tabId, closedTab] of Object.entries(newItems.logDetailsInRAM)) {
-      const tabWindowId = closedTab[0].tabWindowId || 'unknownWindow'
-      if (!closedTabs[tabWindowId]) closedTabs[tabWindowId] = {}
-      closedTabs[tabWindowId][tabId] = closedTab
-    }
+    } 
 
     statsObject.tabitems = { openTabs, closedTabs }
     return { openTabs, closedTabs }
